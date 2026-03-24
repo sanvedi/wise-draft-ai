@@ -6,7 +6,6 @@ import Header from "@/components/ecos/Header";
 import AgentCard, { AgentStatus } from "@/components/ecos/AgentCard";
 import PipelineConnector from "@/components/ecos/PipelineConnector";
 import MultimodalInput, { MediaItem } from "@/components/ecos/MultimodalInput";
-import InputAnalyzer from "@/components/ecos/InputAnalyzer";
 import BrandDNAPanel, { BrandDNA } from "@/components/ecos/BrandDNAPanel";
 import PlatformCard, { PlatformContent } from "@/components/ecos/PlatformCard";
 import OutputPreview from "@/components/ecos/OutputPreview";
@@ -51,6 +50,7 @@ const Index = () => {
   const [bufferChannels, setBufferChannels] = useState<BufferChannel[]>([]);
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
   const [bufferOrgId, setBufferOrgId] = useState<string | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
   const updateAgent = useCallback((name: string, update: Partial<AgentState>) => {
     setAgents((prev) => ({ ...prev, [name]: { ...prev[name], ...update } }));
@@ -221,10 +221,10 @@ const Index = () => {
   }, [updateAgent]);
 
   const agentConfig = [
-    { key: "drafter", name: "Drafter", subtitle: "Knowledge Architect", model: "Gemini 3 Flash", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
-    { key: "reviewer", name: "Reviewer", subtitle: "Compliance & Governance", model: "AI Critic (RLAIF)", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
-    { key: "customizer", name: "Customizer", subtitle: "Viral Content Optimizer", model: "Platform Optimizer", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
-    { key: "publisher", name: "Publisher", subtitle: "API Integrator", model: "Distribution Engine", icon: Rocket, colorClass: "text-agent-publisher", glowClass: "glow-agent-publisher" },
+    { key: "drafter", name: "Drafter", subtitle: "Content Architect", model: "Gemini 3 Flash", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
+    { key: "reviewer", name: "Reviewer", subtitle: "Brand Compliance", model: "AI Critic (RLAIF)", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
+    { key: "customizer", name: "Customizer", subtitle: "Viral Optimizer", model: "Platform Optimizer", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
+    { key: "publisher", name: "Publisher", subtitle: "Distribution", model: "Buffer API", icon: Rocket, colorClass: "text-agent-publisher", glowClass: "glow-agent-publisher" },
   ];
 
   const connectorStates = [
@@ -236,40 +236,29 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-background p-4 lg:p-6 max-w-[1600px] mx-auto">
       <Header />
-      <div className="mt-4"><MetricsBar {...metrics} /></div>
 
-      <div className="mt-4 flex items-stretch gap-2">
+      {/* Compact agent pipeline strip */}
+      <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1">
         {agentConfig.map((cfg, i) => (
-          <div key={cfg.key} className="flex items-stretch gap-2 flex-1">
-            <div className="flex-1">
-              <AgentCard {...cfg} status={agents[cfg.key].status} output={agents[cfg.key].output} score={agents[cfg.key].score} index={i} />
-            </div>
+          <div key={cfg.key} className="flex items-center gap-1.5 flex-shrink-0">
+            <AgentCard {...cfg} status={agents[cfg.key].status} output={agents[cfg.key].output} score={agents[cfg.key].score} index={i} />
             {i < connectorStates.length && (
-              <div className="flex items-center"><PipelineConnector {...connectorStates[i]} /></div>
+              <PipelineConnector {...connectorStates[i]} />
             )}
           </div>
         ))}
       </div>
 
-      <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
-        <div className="lg:col-span-2 space-y-4">
-          <MultimodalInput onSubmit={runPipeline} isProcessing={isRunning} />
-          <InputAnalyzer media={media} />
-          <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
-          <BufferConnect
-            channels={bufferChannels}
-            selectedChannelIds={selectedChannelIds}
-            onChannelsLoaded={(channels) => setBufferChannels(channels)}
-            onSelectionChange={setSelectedChannelIds}
-            onOrgIdLoaded={setBufferOrgId}
-          />
-          <BufferAnalytics
-            organizationId={bufferOrgId}
-            channelIds={selectedChannelIds}
-          />
-        </div>
+      {/* Metrics - compact */}
+      <div className="mt-3">
+        <MetricsBar {...metrics} />
+      </div>
 
-        <div className="lg:col-span-3 space-y-4">
+      {/* Main content: 2-column layout */}
+      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Left: Input + Preview */}
+        <div className="space-y-4">
+          <MultimodalInput onSubmit={runPipeline} isProcessing={isRunning} />
           <OutputPreview
             content={previewContent}
             platform="all-platforms"
@@ -277,20 +266,48 @@ const Index = () => {
             onApprove={handlePublishAll}
             onReject={handleReject}
           />
-          <div>
-            <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider mb-2">Platform Distribution</h3>
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-3">
-              {platforms.map((p, i) => (
-                <PlatformCard
-                  key={p.platform}
-                  data={p}
-                  onPublish={handlePublish}
-                  onPreview={() => setPreviewContent(p.content || null)}
-                  index={i}
-                />
-              ))}
-            </div>
+        </div>
+
+        {/* Right: Platform cards */}
+        <div className="space-y-4">
+          <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
+          <div className="grid grid-cols-2 gap-3">
+            {platforms.map((p, i) => (
+              <PlatformCard
+                key={p.platform}
+                data={p}
+                onPublish={handlePublish}
+                onPreview={() => setPreviewContent(p.content || null)}
+                index={i}
+              />
+            ))}
           </div>
+
+          {/* Collapsible settings section */}
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="w-full text-left text-[10px] font-mono text-muted-foreground uppercase tracking-wider py-2 border-t border-border flex items-center justify-between"
+          >
+            <span>Settings & Integrations</span>
+            <span>{showSettings ? "▲" : "▼"}</span>
+          </button>
+
+          {showSettings && (
+            <div className="space-y-4">
+              <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
+              <BufferConnect
+                channels={bufferChannels}
+                selectedChannelIds={selectedChannelIds}
+                onChannelsLoaded={(channels) => setBufferChannels(channels)}
+                onSelectionChange={setSelectedChannelIds}
+                onOrgIdLoaded={setBufferOrgId}
+              />
+              <BufferAnalytics
+                organizationId={bufferOrgId}
+                channelIds={selectedChannelIds}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

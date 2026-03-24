@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_integrations: {
+        Row: {
+          connected_at: string | null
+          created_at: string
+          encrypted_api_key: string
+          id: string
+          is_connected: boolean
+          platform_id: string
+          platform_name: string
+          supported_services: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          connected_at?: string | null
+          created_at?: string
+          encrypted_api_key?: string
+          id?: string
+          is_connected?: boolean
+          platform_id: string
+          platform_name: string
+          supported_services?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          connected_at?: string | null
+          created_at?: string
+          encrypted_api_key?: string
+          id?: string
+          is_connected?: boolean
+          platform_id?: string
+          platform_name?: string
+          supported_services?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

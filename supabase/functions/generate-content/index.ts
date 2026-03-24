@@ -32,7 +32,7 @@ serve(async (req) => {
     const targetPlatforms = platforms || Object.keys(platformSpecs);
 
     const brandContext = brandDNA
-      ? `\n\nBRAND DNA CONTEXT (use this to ensure brand consistency):\n- Tone: ${brandDNA.tone}\n- Values: ${brandDNA.values?.join(", ")}\n- Personality: ${brandDNA.personality}\n- Target Audience: ${brandDNA.targetAudience}\n- Guidelines:\n${brandDNA.guidelines?.map((g: string) => `  • ${g}`).join("\n")}\n- Brand Colors: ${brandDNA.colors?.map((c: any) => `${c.name}: ${c.hex}`).join(", ")}`
+      ? `\n\nBRAND DNA CONTEXT — STRICTLY follow this for ALL content:\n- ORGANIZATION NAME: ${brandDNA.organizationName || "Unknown"} (ALWAYS use this exact name — never guess or use alternate names)\n- Tagline: ${brandDNA.tagline || "N/A"}\n- About: ${brandDNA.websiteSummary || "N/A"}\n- Key Offerings: ${brandDNA.keyOfferings?.join(", ") || "N/A"}\n- Tone: ${brandDNA.tone}\n- Values: ${brandDNA.values?.join(", ")}\n- Personality: ${brandDNA.personality}\n- Target Audience: ${brandDNA.targetAudience}\n- Guidelines:\n${brandDNA.guidelines?.map((g: string) => `  • ${g}`).join("\n")}\n- Brand Colors: ${brandDNA.colors?.map((c: any) => `${c.name}: ${c.hex}`).join(", ")}`
       : "";
 
     const mediaContext = mediaDescriptions?.length

@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Globe, Palette, Type, Loader2 } from "lucide-react";
+import { Globe, Palette, Type, Loader2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export interface BrandDNA {
+  organizationName?: string;
+  tagline?: string;
   colors: { name: string; hex: string }[];
   fonts: string[];
   tone: string;
   logo?: string;
   guidelines: string[];
+  keyOfferings?: string[];
+  websiteSummary?: string;
 }
 
 interface BrandDNAPanelProps {
@@ -29,7 +33,7 @@ const BrandDNAPanel = ({ brandData, onExtract, isExtracting }: BrandDNAPanelProp
       <div className="flex items-center gap-2">
         <Palette className="w-4 h-4 text-agent-customizer" />
         <h3 className="text-sm font-semibold text-foreground">Brand DNA</h3>
-        <span className="text-[9px] font-mono text-muted-foreground ml-auto px-1.5 py-0.5 rounded bg-muted">Pomelli</span>
+        <span className="text-[9px] font-mono text-muted-foreground ml-auto px-1.5 py-0.5 rounded bg-muted">Deep Crawl</span>
       </div>
 
       <div className="flex gap-2">
@@ -55,6 +59,24 @@ const BrandDNAPanel = ({ brandData, onExtract, isExtracting }: BrandDNAPanelProp
 
       {brandData && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-3 pt-2 border-t border-border">
+          {/* Organization Name */}
+          {brandData.organizationName && (
+            <div className="flex items-center gap-2">
+              <Building2 className="w-3.5 h-3.5 text-primary" />
+              <span className="text-sm font-semibold text-foreground">{brandData.organizationName}</span>
+            </div>
+          )}
+
+          {/* Summary */}
+          {brandData.websiteSummary && (
+            <p className="text-[10px] text-muted-foreground leading-relaxed">{brandData.websiteSummary}</p>
+          )}
+
+          {/* Tagline */}
+          {brandData.tagline && (
+            <p className="text-[10px] italic text-foreground/80">"{brandData.tagline}"</p>
+          )}
+
           {/* Colors */}
           <div>
             <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Colors</span>
@@ -71,7 +93,7 @@ const BrandDNAPanel = ({ brandData, onExtract, isExtracting }: BrandDNAPanelProp
           {/* Fonts */}
           <div>
             <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Typography</span>
-            <div className="flex gap-1.5 mt-1">
+            <div className="flex gap-1.5 mt-1 flex-wrap">
               {brandData.fonts.map((f) => (
                 <span key={f} className="text-[10px] font-mono px-2 py-0.5 rounded bg-muted text-foreground flex items-center gap-1">
                   <Type className="w-2.5 h-2.5" /> {f}
@@ -86,9 +108,21 @@ const BrandDNAPanel = ({ brandData, onExtract, isExtracting }: BrandDNAPanelProp
             <p className="text-xs text-foreground mt-0.5">{brandData.tone}</p>
           </div>
 
+          {/* Key Offerings */}
+          {brandData.keyOfferings && brandData.keyOfferings.length > 0 && (
+            <div>
+              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Key Offerings</span>
+              <div className="flex gap-1 mt-1 flex-wrap">
+                {brandData.keyOfferings.map((o, i) => (
+                  <span key={i} className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary">{o}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Guidelines */}
           <div>
-            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Key Guidelines</span>
+            <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider">Content Guidelines</span>
             <ul className="mt-1 space-y-0.5">
               {brandData.guidelines.map((g, i) => (
                 <li key={i} className="text-[10px] text-muted-foreground flex items-start gap-1.5">

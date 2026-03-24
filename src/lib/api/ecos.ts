@@ -22,7 +22,7 @@ interface BrandDNAResult {
   error?: string;
 }
 
-export async function publishViaZapier(
+export async function publishViaWebhook(
   webhookUrl: string,
   contents: { platform: string; content: string }[],
   mediaUrls?: string[]

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { BookOpen, ShieldCheck, Palette, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ecosApi, publishViaZapier } from "@/lib/api/ecos";
+import { ecosApi, publishViaWebhook } from "@/lib/api/ecos";
 import Header from "@/components/ecos/Header";
 import AgentCard, { AgentStatus } from "@/components/ecos/AgentCard";
 import PipelineConnector from "@/components/ecos/PipelineConnector";
@@ -11,7 +11,7 @@ import BrandDNAPanel, { BrandDNA } from "@/components/ecos/BrandDNAPanel";
 import PlatformCard, { PlatformContent } from "@/components/ecos/PlatformCard";
 import OutputPreview from "@/components/ecos/OutputPreview";
 import MetricsBar from "@/components/ecos/MetricsBar";
-import ZapierWebhookInput from "@/components/ecos/ZapierWebhookInput";
+import WebhookInput from "@/components/ecos/ZapierWebhookInput";
 
 interface AgentState {
   status: AgentStatus;
@@ -47,7 +47,7 @@ const Index = () => {
   const [fullBrandDNA, setFullBrandDNA] = useState<any>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [metrics, setMetrics] = useState({ tokenEfficiency: 0, alignmentDrift: 0, cycleReduction: 0, processingTime: null as number | null });
-  const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
 
   const updateAgent = useCallback((name: string, update: Partial<AgentState>) => {
     setAgents((prev) => ({ ...prev, [name]: { ...prev[name], ...update } }));
@@ -170,24 +170,24 @@ const Index = () => {
     const platformData = platforms.find((p) => p.platform === platform);
     if (!platformData?.content) return;
 
-    if (zapierWebhookUrl) {
+    if (webhookUrl) {
       updatePlatform(platform, { status: "publishing" as any });
-      const result = await publishViaZapier(zapierWebhookUrl, [{ platform, content: platformData.content }]);
+      const result = await publishViaWebhook(webhookUrl, [{ platform, content: platformData.content }]);
       if (result.success) {
         updatePlatform(platform, { status: "published" });
-        toast({ title: "Sent to Zapier", description: `${platform} content sent to your Zap` });
+        toast({ title: "Sent to Make.com", description: `${platform} content sent to your scenario` });
       } else {
         updatePlatform(platform, { status: "failed" });
         toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
       }
     } else {
-      toast({ title: "No Webhook", description: "Add your Zapier webhook URL first", variant: "destructive" });
+      toast({ title: "No Webhook", description: "Add your Make.com webhook URL first", variant: "destructive" });
     }
-  }, [platforms, zapierWebhookUrl, updatePlatform, toast]);
+  }, [platforms, webhookUrl, updatePlatform, toast]);
 
   const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
-    if (!zapierWebhookUrl) {
-      toast({ title: "No Webhook", description: "Add your Zapier webhook URL first", variant: "destructive" });
+    if (!webhookUrl) {
+      toast({ title: "No Webhook", description: "Add your Make.com webhook URL first", variant: "destructive" });
       return;
     }
     updateAgent("publisher", { status: "running" });
@@ -197,19 +197,19 @@ const Index = () => {
       .filter((p) => p.status === "preview" && p.content)
       .map((p) => ({ platform: p.platform, content: p.content! }));
 
-    const result = await publishViaZapier(zapierWebhookUrl, contentsToPublish);
+    const result = await publishViaWebhook(webhookUrl, contentsToPublish);
 
     if (result.success) {
       for (const p of contentsToPublish) {
         updatePlatform(p.platform, { status: "published" });
       }
-      updateAgent("publisher", { status: "complete", output: `Sent ${contentsToPublish.length} posts to Zapier • RLHF data captured (${rating}★)${feedback ? ` • "${feedback}"` : ""}` });
-      toast({ title: "All Sent to Zapier", description: `${contentsToPublish.length} platform posts sent (${rating}★ rating captured)` });
+      updateAgent("publisher", { status: "complete", output: `Sent ${contentsToPublish.length} posts via Make.com • RLHF data captured (${rating}★)${feedback ? ` • "${feedback}"` : ""}` });
+      toast({ title: "All Sent", description: `${contentsToPublish.length} platform posts sent (${rating}★ rating captured)` });
     } else {
       updateAgent("publisher", { status: "failed", output: result.error });
       toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
     }
-  }, [platforms, zapierWebhookUrl, updateAgent, updatePlatform, toast]);
+  }, [platforms, webhookUrl, updateAgent, updatePlatform, toast]);
 
   const handleReject = useCallback(() => {
     setPreviewStatus("generating");
@@ -259,7 +259,7 @@ const Index = () => {
           <MultimodalInput onSubmit={runPipeline} isProcessing={isRunning} />
           <InputAnalyzer media={media} />
           <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
-          <ZapierWebhookInput webhookUrl={zapierWebhookUrl} onSave={setZapierWebhookUrl} />
+          <WebhookInput webhookUrl={webhookUrl} onSave={setWebhookUrl} />
         </div>
 
         <div className="lg:col-span-3 space-y-4">

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, ShieldCheck, Palette, Rocket, Brain } from "lucide-react";
+import { BookOpen, ShieldCheck, Palette, Rocket, Brain, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { ecosApi } from "@/lib/api/ecos";
@@ -134,9 +134,10 @@ const GeneratePage = () => {
 
       {!fullBrandDNA && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-4 border-agent-reviewer/30">
-          <p className="text-sm text-agent-reviewer">
+          <p className="text-sm text-agent-reviewer flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             No Brand DNA loaded. Content will be generated without brand compliance checks.{" "}
-            <button onClick={() => navigate("/brand")} className="underline hover:text-foreground">Set up Brand Assets →</button>
+            <button onClick={() => navigate("/brand")} className="underline hover:text-foreground">Set up Brand Assets</button>
           </p>
         </motion.div>
       )}

@@ -139,7 +139,7 @@ const Index = () => {
       for (const item of result.contents) {
         updatePlatform(item.platform, { status: "preview", content: item.content });
       }
-      updateAgent("customizer", { status: "complete", output: `${result.contents.length} platform variants ready` });
+      updateAgent("customizer", { status: "complete", output: `${result.contents.length} viral-optimized platform variants ready — awaiting human approval` });
 
       const firstContent = result.contents[0]?.content || null;
       setPreviewContent(firstContent);

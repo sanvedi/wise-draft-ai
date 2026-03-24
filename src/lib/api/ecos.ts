@@ -1,11 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { BrandDNA } from "@/components/ecos/BrandDNAPanel";
-import { useIntegrationsStore } from "@/lib/store/integrationsStore";
-
-function getBufferAccessToken(): string | undefined {
-  const conn = useIntegrationsStore.getState().connections.find((c) => c.id === "buffer");
-  return conn?.apiKey || undefined;
-}
 
 interface GeneratedContent {
   platform: string;
@@ -30,7 +24,7 @@ interface BrandDNAResult {
 
 export async function getBufferOrganizations(): Promise<{ success: boolean; organizations?: { id: string }[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke("publish-buffer", {
-    body: { action: "get-organizations", accessToken: getBufferAccessToken() },
+    body: { action: "get-organizations" },
   });
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error };
@@ -39,7 +33,7 @@ export async function getBufferOrganizations(): Promise<{ success: boolean; orga
 
 export async function getBufferChannels(organizationId: string): Promise<{ success: boolean; channels?: any[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke("publish-buffer", {
-    body: { action: "list-channels", organizationId, accessToken: getBufferAccessToken() },
+    body: { action: "list-channels", organizationId },
   });
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error };
@@ -51,7 +45,7 @@ export async function getBufferPosts(
   channelIds?: string[]
 ): Promise<{ success: boolean; posts?: any[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke("publish-buffer", {
-    body: { action: "get-posts", organizationId, channelIds, accessToken: getBufferAccessToken() },
+    body: { action: "get-posts", organizationId, channelIds },
   });
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error };
@@ -63,11 +57,39 @@ export async function publishViaBuffer(
   channelIds: string[]
 ): Promise<{ success: boolean; results?: any[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke("publish-buffer", {
-    body: { action: "publish", contents, channelIds, accessToken: getBufferAccessToken() },
+    body: { action: "publish", contents, channelIds },
   });
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error };
   return { success: true, results: data.results };
+}
+
+// Manage integrations server-side
+export async function saveIntegrationKey(platformId: string, apiKey: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("manage-integrations", {
+    body: { action: "save-key", platformId, apiKey },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true };
+}
+
+export async function disconnectIntegration(platformId: string): Promise<{ success: boolean; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("manage-integrations", {
+    body: { action: "disconnect", platformId },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true };
+}
+
+export async function listIntegrations(): Promise<{ success: boolean; integrations?: any[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("manage-integrations", {
+    body: { action: "list" },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, integrations: data.integrations };
 }
 
 export const ecosApi = {

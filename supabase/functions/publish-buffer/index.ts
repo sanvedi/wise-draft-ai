@@ -5,7 +5,36 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const BUFFER_API = "https://api.bufferapp.com/1";
+const BUFFER_GRAPHQL_URL = "https://api.buffer.com";
+
+async function bufferGraphQL(query: string, variables: Record<string, unknown>, apiKey: string) {
+  const res = await fetch(BUFFER_GRAPHQL_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({ query, variables }),
+  });
+
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    throw new Error(`Buffer returned non-JSON [${res.status}]: ${text.substring(0, 300)}`);
+  }
+
+  if (!res.ok) {
+    throw new Error(`Buffer API error [${res.status}]: ${JSON.stringify(data)}`);
+  }
+
+  if (data.errors?.length) {
+    throw new Error(`Buffer GraphQL error: ${data.errors.map((e: any) => e.message).join(", ")}`);
+  }
+
+  return data.data;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -13,7 +42,7 @@ serve(async (req) => {
   try {
     const BUFFER_ACCESS_TOKEN = Deno.env.get("BUFFER_ACCESS_TOKEN");
     if (!BUFFER_ACCESS_TOKEN) {
-      throw new Error("BUFFER_ACCESS_TOKEN is not configured. Add it in project secrets.");
+      throw new Error("BUFFER_ACCESS_TOKEN is not configured. Generate one at publish.buffer.com/settings/api");
     }
 
     let body;
@@ -25,42 +54,70 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { action, contents, profileIds } = body;
 
-    // Action: list-profiles — returns connected Buffer profiles
-    if (action === "list-profiles") {
-      const res = await fetch(`${BUFFER_API}/profiles.json?access_token=${BUFFER_ACCESS_TOKEN}`);
-      const rawText = await res.text();
-      console.log("Buffer list-profiles response status:", res.status, "body:", rawText.substring(0, 500));
+    const { action } = body;
 
-      let profiles;
-      try {
-        profiles = JSON.parse(rawText);
-      } catch {
-        throw new Error(`Buffer returned non-JSON response [${res.status}]: ${rawText.substring(0, 200)}`);
-      }
+    // Action: get-organizations
+    if (action === "get-organizations") {
+      const data = await bufferGraphQL(`
+        query GetOrganizations {
+          account {
+            organizations {
+              id
+            }
+          }
+        }
+      `, {}, BUFFER_ACCESS_TOKEN);
 
-      if (!res.ok) {
-        throw new Error(`Buffer API error [${res.status}]: ${rawText.substring(0, 200)}`);
-      }
       return new Response(JSON.stringify({
         success: true,
-        profiles: profiles.map((p: any) => ({
-          id: p.id,
-          service: p.service,
-          serviceUsername: p.service_username,
-          avatar: p.avatar_https,
-          formatted: p.formatted_service,
-        })),
+        organizations: data.account.organizations,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Action: publish — post content to selected profiles
+    // Action: list-channels — fetch channels for an organization
+    if (action === "list-channels") {
+      const { organizationId } = body;
+      if (!organizationId) {
+        return new Response(JSON.stringify({ error: "organizationId is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const data = await bufferGraphQL(`
+        query GetChannels($input: ChannelsInput!) {
+          channels(input: $input) {
+            id
+            name
+            service
+            avatar
+            isLocked
+          }
+        }
+      `, { input: { organizationId } }, BUFFER_ACCESS_TOKEN);
+
+      return new Response(JSON.stringify({
+        success: true,
+        channels: data.channels,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action: publish — create posts on selected channels
     if (action === "publish") {
+      const { contents, channelIds } = body;
       if (!contents || !Array.isArray(contents) || contents.length === 0) {
-        return new Response(JSON.stringify({ error: "Contents array is required" }), {
+        return new Response(JSON.stringify({ error: "contents array is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (!channelIds || !Array.isArray(channelIds) || channelIds.length === 0) {
+        return new Response(JSON.stringify({ error: "channelIds array is required" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -69,31 +126,43 @@ serve(async (req) => {
       const results: any[] = [];
 
       for (const item of contents) {
-        // Find matching profile IDs for this platform, or use provided profileIds
-        const targetProfiles = profileIds || [];
+        for (const channelId of channelIds) {
+          try {
+            const data = await bufferGraphQL(`
+              mutation CreatePost($input: CreatePostInput!) {
+                createPost(input: $input) {
+                  ... on PostActionSuccess {
+                    post {
+                      id
+                      text
+                    }
+                  }
+                  ... on CoreWebAppError {
+                    message
+                  }
+                }
+              }
+            `, {
+              input: {
+                text: item.content,
+                channelId,
+                schedulingType: "automatic",
+                mode: "shareNow",
+              },
+            }, BUFFER_ACCESS_TOKEN);
 
-        const formData = new URLSearchParams();
-        formData.append("text", item.content);
-        formData.append("access_token", BUFFER_ACCESS_TOKEN);
-        formData.append("now", "true"); // Post immediately
-
-        for (const pid of targetProfiles) {
-          formData.append("profile_ids[]", pid);
-        }
-
-        const res = await fetch(`${BUFFER_API}/updates/create.json`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: formData.toString(),
-        });
-
-        const data = await res.json();
-         if (!res.ok) {
-          console.error(`Buffer post error for ${item.platform}:`, data);
-          results.push({ platform: item.platform, success: false, error: data.message || "Failed" });
-        } else {
-          console.log(`Buffer post success for ${item.platform}`);
-          results.push({ platform: item.platform, success: true, updateId: data.updates?.[0]?.id });
+            const result = data.createPost;
+            if (result.post) {
+              console.log(`Buffer post success: ${item.platform} → ${channelId}`);
+              results.push({ platform: item.platform, channelId, success: true, postId: result.post.id });
+            } else {
+              console.error(`Buffer post error: ${result.message}`);
+              results.push({ platform: item.platform, channelId, success: false, error: result.message });
+            }
+          } catch (e) {
+            console.error(`Buffer post exception for ${item.platform}:`, e);
+            results.push({ platform: item.platform, channelId, success: false, error: e instanceof Error ? e.message : "Unknown error" });
+          }
         }
       }
 
@@ -102,12 +171,12 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use 'list-profiles' or 'publish'" }), {
+    return new Response(JSON.stringify({ error: "Invalid action. Use 'get-organizations', 'list-channels', or 'publish'" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("Buffer publish error:", e);
+    console.error("Buffer edge function error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

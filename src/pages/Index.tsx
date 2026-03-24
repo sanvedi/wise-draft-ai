@@ -11,7 +11,7 @@ import BrandDNAPanel, { BrandDNA } from "@/components/ecos/BrandDNAPanel";
 import PlatformCard, { PlatformContent } from "@/components/ecos/PlatformCard";
 import OutputPreview from "@/components/ecos/OutputPreview";
 import MetricsBar from "@/components/ecos/MetricsBar";
-import BufferConnect, { BufferProfile } from "@/components/ecos/BufferConnect";
+import BufferConnect, { BufferChannel } from "@/components/ecos/BufferConnect";
 
 interface AgentState {
   status: AgentStatus;
@@ -47,8 +47,8 @@ const Index = () => {
   const [fullBrandDNA, setFullBrandDNA] = useState<any>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [metrics, setMetrics] = useState({ tokenEfficiency: 0, alignmentDrift: 0, cycleReduction: 0, processingTime: null as number | null });
-  const [bufferProfiles, setBufferProfiles] = useState<BufferProfile[]>([]);
-  const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([]);
+  const [bufferChannels, setBufferChannels] = useState<BufferChannel[]>([]);
+  const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
 
   const updateAgent = useCallback((name: string, update: Partial<AgentState>) => {
     setAgents((prev) => ({ ...prev, [name]: { ...prev[name], ...update } }));
@@ -93,9 +93,7 @@ const Index = () => {
     });
 
     try {
-      // Stage 1: Drafter — sends to AI for content generation
       updateAgent("drafter", { status: "running" });
-
       const platformNames = defaultPlatforms.map((p) => p.platform);
       const result = await ecosApi.generateContent(prompt, platformNames, fullBrandDNA, mediaDescriptions);
 
@@ -109,14 +107,12 @@ const Index = () => {
 
       updateAgent("drafter", { status: "complete", output: `Drafted content for ${result.contents.length} platforms` });
 
-      // Stage 2: Reviewer — uses compliance score from AI
       updateAgent("reviewer", { status: "running" });
-      await new Promise((r) => setTimeout(r, 800)); // Brief visual delay for UX
+      await new Promise((r) => setTimeout(r, 800));
 
       const score = result.complianceScore;
       if (score < 3) {
         updateAgent("reviewer", { status: "failed", output: `Brand compliance low (${score}/5) — ${result.reviewNotes}`, score });
-        // Re-generate with stricter brand adherence
         updateAgent("drafter", { status: "running", output: "Re-drafting with stricter brand compliance..." });
         const retry = await ecosApi.generateContent(
           `${prompt}\n\nIMPORTANT: Strictly follow brand guidelines. Previous attempt scored ${score}/5. ${result.reviewNotes}`,
@@ -132,7 +128,6 @@ const Index = () => {
 
       updateAgent("reviewer", { status: "complete", output: result.reviewNotes || "All checks passed", score: Math.max(score, 4) });
 
-      // Stage 3: Customizer — distribute content to platform cards
       updateAgent("customizer", { status: "running" });
       for (const p of defaultPlatforms) {
         updatePlatform(p.platform, { status: "generating" as any });
@@ -144,7 +139,6 @@ const Index = () => {
       }
       updateAgent("customizer", { status: "complete", output: `${result.contents.length} platform variants ready` });
 
-      // Set first available content as preview
       const firstContent = result.contents[0]?.content || null;
       setPreviewContent(firstContent);
       setPreviewStatus("review");
@@ -171,12 +165,12 @@ const Index = () => {
     const platformData = platforms.find((p) => p.platform === platform);
     if (!platformData?.content) return;
 
-    if (selectedProfileIds.length === 0) {
-      toast({ title: "No Profiles", description: "Load and select Buffer profiles first", variant: "destructive" });
+    if (selectedChannelIds.length === 0) {
+      toast({ title: "No Channels", description: "Load and select Buffer channels first", variant: "destructive" });
       return;
     }
     updatePlatform(platform, { status: "publishing" as any });
-    const result = await publishViaBuffer([{ platform, content: platformData.content }], selectedProfileIds);
+    const result = await publishViaBuffer([{ platform, content: platformData.content }], selectedChannelIds);
     if (result.success) {
       updatePlatform(platform, { status: "published" });
       toast({ title: "Published via Buffer", description: `${platform} content sent` });
@@ -184,11 +178,11 @@ const Index = () => {
       updatePlatform(platform, { status: "failed" });
       toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
     }
-  }, [platforms, selectedProfileIds, updatePlatform, toast]);
+  }, [platforms, selectedChannelIds, updatePlatform, toast]);
 
   const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
-    if (selectedProfileIds.length === 0) {
-      toast({ title: "No Profiles", description: "Load and select Buffer profiles first", variant: "destructive" });
+    if (selectedChannelIds.length === 0) {
+      toast({ title: "No Channels", description: "Load and select Buffer channels first", variant: "destructive" });
       return;
     }
     updateAgent("publisher", { status: "running" });
@@ -198,7 +192,7 @@ const Index = () => {
       .filter((p) => p.status === "preview" && p.content)
       .map((p) => ({ platform: p.platform, content: p.content! }));
 
-    const result = await publishViaBuffer(contentsToPublish, selectedProfileIds);
+    const result = await publishViaBuffer(contentsToPublish, selectedChannelIds);
 
     if (result.success) {
       for (const p of contentsToPublish) {
@@ -210,7 +204,7 @@ const Index = () => {
       updateAgent("publisher", { status: "failed", output: result.error });
       toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
     }
-  }, [platforms, selectedProfileIds, updateAgent, updatePlatform, toast]);
+  }, [platforms, selectedChannelIds, updateAgent, updatePlatform, toast]);
 
   const handleReject = useCallback(() => {
     setPreviewStatus("generating");
@@ -261,10 +255,10 @@ const Index = () => {
           <InputAnalyzer media={media} />
           <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
           <BufferConnect
-            profiles={bufferProfiles}
-            selectedProfileIds={selectedProfileIds}
-            onProfilesLoaded={setBufferProfiles}
-            onSelectionChange={setSelectedProfileIds}
+            channels={bufferChannels}
+            selectedChannelIds={selectedChannelIds}
+            onChannelsLoaded={setBufferChannels}
+            onSelectionChange={setSelectedChannelIds}
           />
         </div>
 

@@ -22,12 +22,30 @@ interface BrandDNAResult {
   error?: string;
 }
 
+export async function getBufferOrganizations(): Promise<{ success: boolean; organizations?: { id: string }[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("publish-buffer", {
+    body: { action: "get-organizations" },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, organizations: data.organizations };
+}
+
+export async function getBufferChannels(organizationId: string): Promise<{ success: boolean; channels?: any[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("publish-buffer", {
+    body: { action: "list-channels", organizationId },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, channels: data.channels };
+}
+
 export async function publishViaBuffer(
   contents: { platform: string; content: string }[],
-  profileIds: string[]
+  channelIds: string[]
 ): Promise<{ success: boolean; results?: any[]; error?: string }> {
   const { data, error } = await supabase.functions.invoke("publish-buffer", {
-    body: { action: "publish", contents, profileIds },
+    body: { action: "publish", contents, channelIds },
   });
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error };
@@ -49,7 +67,6 @@ export const ecosApi = {
       return { success: false, error: data.error };
     }
 
-    // Map to BrandDNA interface
     const raw = data.brandDNA;
     const brandDNA: BrandDNA & { values?: string[]; targetAudience?: string; personality?: string } = {
       colors: raw.colors || [],

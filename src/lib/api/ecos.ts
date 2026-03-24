@@ -22,28 +22,16 @@ interface BrandDNAResult {
   error?: string;
 }
 
-export async function publishViaWebhook(
-  webhookUrl: string,
+export async function publishViaBuffer(
   contents: { platform: string; content: string }[],
-  mediaUrls?: string[]
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      mode: "no-cors",
-      body: JSON.stringify({
-        timestamp: new Date().toISOString(),
-        triggered_from: window.location.origin,
-        contents,
-        mediaUrls: mediaUrls || [],
-      }),
-    });
-    // no-cors means we can't read the response, assume sent
-    return { success: true };
-  } catch (e) {
-    return { success: false, error: e instanceof Error ? e.message : "Failed to trigger webhook" };
-  }
+  profileIds: string[]
+): Promise<{ success: boolean; results?: any[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("publish-buffer", {
+    body: { action: "publish", contents, profileIds },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, results: data.results };
 }
 
 export const ecosApi = {

@@ -22,6 +22,30 @@ interface BrandDNAResult {
   error?: string;
 }
 
+export async function publishViaZapier(
+  webhookUrl: string,
+  contents: { platform: string; content: string }[],
+  mediaUrls?: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await fetch(webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      mode: "no-cors",
+      body: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        triggered_from: window.location.origin,
+        contents,
+        mediaUrls: mediaUrls || [],
+      }),
+    });
+    // no-cors means we can't read the response, assume sent
+    return { success: true };
+  } catch (e) {
+    return { success: false, error: e instanceof Error ? e.message : "Failed to trigger webhook" };
+  }
+}
+
 export const ecosApi = {
   async extractBrandDNA(url: string): Promise<BrandDNAResult> {
     const { data, error } = await supabase.functions.invoke("extract-brand-dna", {

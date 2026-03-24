@@ -41,9 +41,6 @@ serve(async (req) => {
 
   try {
     const BUFFER_ACCESS_TOKEN = Deno.env.get("BUFFER_ACCESS_TOKEN");
-    if (!BUFFER_ACCESS_TOKEN) {
-      throw new Error("BUFFER_ACCESS_TOKEN is not configured. Generate one at publish.buffer.com/settings/api");
-    }
 
     let body;
     try {
@@ -57,6 +54,11 @@ serve(async (req) => {
 
     const { action } = body;
 
+    // Allow client-supplied key to override the env secret (enables multi-account)
+    const accessToken = body.accessToken || BUFFER_ACCESS_TOKEN;
+    if (!accessToken) {
+      throw new Error("No Buffer access token available. Set it in Integrations or configure the BUFFER_ACCESS_TOKEN secret.");
+    }
     // Action: get-organizations
     if (action === "get-organizations") {
       const data = await bufferGraphQL(`

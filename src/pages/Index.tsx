@@ -50,7 +50,6 @@ const Index = () => {
   const [bufferChannels, setBufferChannels] = useState<BufferChannel[]>([]);
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
   const [bufferOrgId, setBufferOrgId] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
 
   const updateAgent = useCallback((name: string, update: Partial<AgentState>) => {
     setAgents((prev) => ({ ...prev, [name]: { ...prev[name], ...update } }));
@@ -108,7 +107,6 @@ const Index = () => {
       }
 
       updateAgent("drafter", { status: "complete", output: `Drafted content for ${result.contents.length} platforms` });
-
       updateAgent("reviewer", { status: "running" });
       await new Promise((r) => setTimeout(r, 800));
 
@@ -120,29 +118,21 @@ const Index = () => {
           `${prompt}\n\nIMPORTANT: Strictly follow brand guidelines. Previous attempt scored ${score}/5. ${result.reviewNotes}`,
           platformNames, fullBrandDNA, mediaDescriptions
         );
-        if (retry.success) {
-          Object.assign(result, retry);
-        }
+        if (retry.success) Object.assign(result, retry);
         updateAgent("drafter", { status: "complete", output: "Revised draft — brand compliance improved" });
         updateAgent("reviewer", { status: "running" });
         await new Promise((r) => setTimeout(r, 500));
       }
 
       updateAgent("reviewer", { status: "complete", output: result.reviewNotes || "All checks passed", score: Math.max(score, 4) });
-
       updateAgent("customizer", { status: "running" });
-      for (const p of defaultPlatforms) {
-        updatePlatform(p.platform, { status: "generating" as any });
-      }
+      for (const p of defaultPlatforms) updatePlatform(p.platform, { status: "generating" as any });
       await new Promise((r) => setTimeout(r, 600));
 
-      for (const item of result.contents) {
-        updatePlatform(item.platform, { status: "preview", content: item.content });
-      }
-      updateAgent("customizer", { status: "complete", output: `${result.contents.length} viral-optimized platform variants ready — awaiting human approval` });
+      for (const item of result.contents) updatePlatform(item.platform, { status: "preview", content: item.content });
+      updateAgent("customizer", { status: "complete", output: `${result.contents.length} viral-optimized variants ready — awaiting approval` });
 
-      const firstContent = result.contents[0]?.content || null;
-      setPreviewContent(firstContent);
+      setPreviewContent(result.contents[0]?.content || null);
       setPreviewStatus("review");
       updateAgent("publisher", { status: "waiting" });
 
@@ -166,7 +156,6 @@ const Index = () => {
   const handlePublish = useCallback(async (platform: string) => {
     const platformData = platforms.find((p) => p.platform === platform);
     if (!platformData?.content) return;
-
     if (selectedChannelIds.length === 0) {
       toast({ title: "No Channels", description: "Load and select Buffer channels first", variant: "destructive" });
       return;
@@ -175,7 +164,7 @@ const Index = () => {
     const result = await publishViaBuffer([{ platform, content: platformData.content }], selectedChannelIds);
     if (result.success) {
       updatePlatform(platform, { status: "published" });
-      toast({ title: "Published via Buffer", description: `${platform} content sent` });
+      toast({ title: "Published", description: `${platform} content sent` });
     } else {
       updatePlatform(platform, { status: "failed" });
       toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
@@ -189,19 +178,12 @@ const Index = () => {
     }
     updateAgent("publisher", { status: "running" });
     setPreviewStatus("approved");
-
-    const contentsToPublish = platforms
-      .filter((p) => p.status === "preview" && p.content)
-      .map((p) => ({ platform: p.platform, content: p.content! }));
-
+    const contentsToPublish = platforms.filter((p) => p.status === "preview" && p.content).map((p) => ({ platform: p.platform, content: p.content! }));
     const result = await publishViaBuffer(contentsToPublish, selectedChannelIds);
-
     if (result.success) {
-      for (const p of contentsToPublish) {
-        updatePlatform(p.platform, { status: "published" });
-      }
-      updateAgent("publisher", { status: "complete", output: `Published ${contentsToPublish.length} posts via Buffer • RLHF (${rating}★)${feedback ? ` • "${feedback}"` : ""}` });
-      toast({ title: "All Published", description: `${contentsToPublish.length} posts sent via Buffer (${rating}★)` });
+      for (const p of contentsToPublish) updatePlatform(p.platform, { status: "published" });
+      updateAgent("publisher", { status: "complete", output: `Published ${contentsToPublish.length} posts (${rating}★)${feedback ? ` — "${feedback}"` : ""}` });
+      toast({ title: "All Published", description: `${contentsToPublish.length} posts sent (${rating}★)` });
     } else {
       updateAgent("publisher", { status: "failed", output: result.error });
       toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
@@ -234,31 +216,39 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background p-4 lg:p-6 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-background px-4 py-3 lg:px-6 lg:py-4 max-w-[1600px] mx-auto space-y-4">
       <Header />
 
-      {/* Compact agent pipeline strip */}
-      <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-1">
+      {/* Agent pipeline */}
+      <div className="flex items-center gap-1.5 overflow-x-auto">
         {agentConfig.map((cfg, i) => (
           <div key={cfg.key} className="flex items-center gap-1.5 flex-shrink-0">
             <AgentCard {...cfg} status={agents[cfg.key].status} output={agents[cfg.key].output} score={agents[cfg.key].score} index={i} />
-            {i < connectorStates.length && (
-              <PipelineConnector {...connectorStates[i]} />
-            )}
+            {i < connectorStates.length && <PipelineConnector {...connectorStates[i]} />}
           </div>
         ))}
       </div>
 
-      {/* Metrics - compact */}
-      <div className="mt-3">
-        <MetricsBar {...metrics} />
-      </div>
+      <MetricsBar {...metrics} />
 
-      {/* Main content: 2-column layout */}
-      <div className="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Left: Input + Preview */}
-        <div className="space-y-4">
+      {/* Main 3-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left: Input + Brand DNA + Buffer */}
+        <div className="lg:col-span-4 space-y-4">
           <MultimodalInput onSubmit={runPipeline} isProcessing={isRunning} />
+          <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
+          <BufferConnect
+            channels={bufferChannels}
+            selectedChannelIds={selectedChannelIds}
+            onChannelsLoaded={(channels) => setBufferChannels(channels)}
+            onSelectionChange={setSelectedChannelIds}
+            onOrgIdLoaded={setBufferOrgId}
+          />
+          <BufferAnalytics organizationId={bufferOrgId} channelIds={selectedChannelIds} />
+        </div>
+
+        {/* Center: Preview + Approval */}
+        <div className="lg:col-span-3">
           <OutputPreview
             content={previewContent}
             platform="all-platforms"
@@ -269,7 +259,7 @@ const Index = () => {
         </div>
 
         {/* Right: Platform cards */}
-        <div className="space-y-4">
+        <div className="lg:col-span-5 space-y-3">
           <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
           <div className="grid grid-cols-2 gap-3">
             {platforms.map((p, i) => (
@@ -282,32 +272,6 @@ const Index = () => {
               />
             ))}
           </div>
-
-          {/* Collapsible settings section */}
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="w-full text-left text-[10px] font-mono text-muted-foreground uppercase tracking-wider py-2 border-t border-border flex items-center justify-between"
-          >
-            <span>Settings & Integrations</span>
-            <span>{showSettings ? "▲" : "▼"}</span>
-          </button>
-
-          {showSettings && (
-            <div className="space-y-4">
-              <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
-              <BufferConnect
-                channels={bufferChannels}
-                selectedChannelIds={selectedChannelIds}
-                onChannelsLoaded={(channels) => setBufferChannels(channels)}
-                onSelectionChange={setSelectedChannelIds}
-                onOrgIdLoaded={setBufferOrgId}
-              />
-              <BufferAnalytics
-                organizationId={bufferOrgId}
-                channelIds={selectedChannelIds}
-              />
-            </div>
-          )}
         </div>
       </div>
     </div>

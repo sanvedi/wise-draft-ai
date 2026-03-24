@@ -21,7 +21,7 @@ const defaultConnections: PlatformConnection[] = [
     id: "buffer",
     name: "Buffer",
     type: "buffer",
-    icon: "📡",
+    icon: "buffer",
     description: "Publish to Facebook, Instagram, LinkedIn, X, YouTube, Pinterest, TikTok, and more via Buffer.",
     apiKeyLabel: "Buffer Access Token",
     apiKeyHint: "Generate at publish.buffer.com → Settings → API",

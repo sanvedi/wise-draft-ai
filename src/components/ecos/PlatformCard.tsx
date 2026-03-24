@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { Send, Eye, CheckCircle2, Loader2 } from "lucide-react";
+import { Send, Eye, CheckCircle2, Loader2, Check } from "lucide-react";
+import { PlatformIcon } from "@/lib/platformIcons";
 import { Button } from "@/components/ui/button";
 
 export type PublishStatus = "idle" | "generating" | "preview" | "publishing" | "published" | "failed";
@@ -42,7 +43,7 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{data.icon}</span>
+          <PlatformIcon platform={data.platform} className="w-4 h-4 text-muted-foreground" />
           <h3 className="text-sm font-semibold text-foreground">{data.platform}</h3>
         </div>
         <div className="flex items-center gap-1.5">
@@ -93,7 +94,7 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
         )}
         {data.status === "published" && (
           <div className="w-full text-center py-1">
-            <span className="text-[10px] font-mono text-primary">✓ Live</span>
+            <span className="text-[10px] font-mono text-primary flex items-center justify-center gap-1"><Check className="w-3 h-3" /> Live</span>
           </div>
         )}
       </div>

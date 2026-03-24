@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
-import { ScanSearch, Image, Video, FileText, Monitor, Smartphone, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ScanSearch, Image, Video, FileText, Monitor, CheckCircle2, AlertTriangle } from "lucide-react";
+import { PlatformIcon } from "@/lib/platformIcons";
 import type { MediaItem } from "./MultimodalInput";
 
 interface InputAnalyzerProps {
@@ -8,7 +9,6 @@ interface InputAnalyzerProps {
 
 interface PlatformFit {
   platform: string;
-  icon: string;
   fit: "optimal" | "compatible" | "incompatible";
   reason: string;
 }
@@ -21,33 +21,33 @@ const analyzePlatformFit = (item: MediaItem): PlatformFit[] => {
 
   if (item.type === "image") {
     return [
-      { platform: "Instagram", icon: "📸", fit: ratio > 0.7 && ratio < 1.1 ? "optimal" : ratio > 0.5 && ratio < 2 ? "compatible" : "incompatible", reason: ratio > 0.7 && ratio < 1.1 ? "Square/portrait ideal" : "May need cropping" },
-      { platform: "YouTube", icon: "▶️", fit: "incompatible", reason: "Video only" },
-      { platform: "X", icon: "𝕏", fit: w >= 600 ? "optimal" : "compatible", reason: w >= 600 ? "Good resolution" : "Low resolution" },
-      { platform: "LinkedIn", icon: "💼", fit: ratio > 1.5 ? "optimal" : "compatible", reason: ratio > 1.5 ? "Landscape ideal" : "Acceptable" },
-      { platform: "Facebook", icon: "📘", fit: "optimal", reason: "All formats accepted" },
-      { platform: "Google Biz", icon: "📍", fit: "optimal", reason: "Featured image ready" },
+      { platform: "Instagram", fit: ratio > 0.7 && ratio < 1.1 ? "optimal" : ratio > 0.5 && ratio < 2 ? "compatible" : "incompatible", reason: ratio > 0.7 && ratio < 1.1 ? "Square/portrait ideal" : "May need cropping" },
+      { platform: "YouTube", fit: "incompatible", reason: "Video only" },
+      { platform: "X", fit: w >= 600 ? "optimal" : "compatible", reason: w >= 600 ? "Good resolution" : "Low resolution" },
+      { platform: "LinkedIn", fit: ratio > 1.5 ? "optimal" : "compatible", reason: ratio > 1.5 ? "Landscape ideal" : "Acceptable" },
+      { platform: "Facebook", fit: "optimal", reason: "All formats accepted" },
+      { platform: "Google Biz", fit: "optimal", reason: "Featured image ready" },
     ];
   }
 
   if (item.type === "video") {
     return [
-      { platform: "Instagram", icon: "📸", fit: dur <= 60 ? "optimal" : dur <= 90 ? "compatible" : "incompatible", reason: dur <= 60 ? "Reels ready" : dur > 90 ? "Too long for Reels" : "Trim recommended" },
-      { platform: "YouTube", icon: "▶️", fit: "optimal", reason: dur <= 60 ? "Shorts ready" : "Long-form ready" },
-      { platform: "X", icon: "𝕏", fit: dur <= 140 ? "optimal" : "incompatible", reason: dur <= 140 ? "Within limit" : "Exceeds 2:20 limit" },
-      { platform: "LinkedIn", icon: "💼", fit: dur <= 600 ? "optimal" : "compatible", reason: dur <= 600 ? "Within limit" : "May need trimming" },
-      { platform: "Facebook", icon: "📘", fit: "optimal", reason: "All durations accepted" },
-      { platform: "Google Biz", icon: "📍", fit: "compatible", reason: "Update supported" },
+      { platform: "Instagram", fit: dur <= 60 ? "optimal" : dur <= 90 ? "compatible" : "incompatible", reason: dur <= 60 ? "Reels ready" : dur > 90 ? "Too long for Reels" : "Trim recommended" },
+      { platform: "YouTube", fit: "optimal", reason: dur <= 60 ? "Shorts ready" : "Long-form ready" },
+      { platform: "X", fit: dur <= 140 ? "optimal" : "incompatible", reason: dur <= 140 ? "Within limit" : "Exceeds 2:20 limit" },
+      { platform: "LinkedIn", fit: dur <= 600 ? "optimal" : "compatible", reason: dur <= 600 ? "Within limit" : "May need trimming" },
+      { platform: "Facebook", fit: "optimal", reason: "All durations accepted" },
+      { platform: "Google Biz", fit: "compatible", reason: "Update supported" },
     ];
   }
 
   return [
-    { platform: "Instagram", icon: "📸", fit: "incompatible", reason: "Media required" },
-    { platform: "YouTube", icon: "▶️", fit: "incompatible", reason: "Video required" },
-    { platform: "X", icon: "𝕏", fit: "compatible", reason: "Link sharing" },
-    { platform: "LinkedIn", icon: "💼", fit: "optimal", reason: "Document sharing" },
-    { platform: "Facebook", icon: "📘", fit: "compatible", reason: "Link sharing" },
-    { platform: "Google Biz", icon: "📍", fit: "compatible", reason: "Link sharing" },
+    { platform: "Instagram", fit: "incompatible", reason: "Media required" },
+    { platform: "YouTube", fit: "incompatible", reason: "Video required" },
+    { platform: "X", fit: "compatible", reason: "Link sharing" },
+    { platform: "LinkedIn", fit: "optimal", reason: "Document sharing" },
+    { platform: "Facebook", fit: "compatible", reason: "Link sharing" },
+    { platform: "Google Biz", fit: "compatible", reason: "Link sharing" },
   ];
 };
 
@@ -102,7 +102,7 @@ const InputAnalyzer = ({ media }: InputAnalyzerProps) => {
                 {item.dimensions && (
                   <span className="flex items-center gap-1">
                     <Monitor className="w-3 h-3" />
-                    {item.dimensions.width}×{item.dimensions.height}
+                    {item.dimensions.width}x{item.dimensions.height}
                   </span>
                 )}
                 {item.type === "video" && item.duration && <span>{Math.round(item.duration)}s</span>}
@@ -114,7 +114,7 @@ const InputAnalyzer = ({ media }: InputAnalyzerProps) => {
                 const FitIcon = fitIcons[fit.fit];
                 return (
                   <div key={fit.platform} className="flex items-center gap-1.5 rounded px-1.5 py-1 bg-muted/50">
-                    <span className="text-xs">{fit.icon}</span>
+                    <PlatformIcon platform={fit.platform} className="w-3 h-3 text-muted-foreground" />
                     <span className="text-[9px] font-mono text-muted-foreground">{fit.platform}</span>
                     <FitIcon className={`w-2.5 h-2.5 ml-auto ${fitColors[fit.fit]}`} />
                   </div>

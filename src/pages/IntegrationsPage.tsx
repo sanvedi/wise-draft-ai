@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Plug, Plus, Eye, EyeOff, Trash2, Check, AlertCircle, ExternalLink, Settings2 } from "lucide-react";
+import { PlatformIcon } from "@/lib/platformIcons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -11,7 +12,7 @@ const templateConnections: Omit<PlatformConnection, "apiKey" | "isConnected">[] 
     id: "hootsuite",
     name: "Hootsuite",
     type: "custom",
-    icon: "🦉",
+    icon: "hootsuite",
     description: "Schedule and publish content across social networks via Hootsuite.",
     apiKeyLabel: "Hootsuite API Token",
     apiKeyHint: "Find in Hootsuite Developer → My Apps → API Key",
@@ -21,7 +22,7 @@ const templateConnections: Omit<PlatformConnection, "apiKey" | "isConnected">[] 
     id: "sprout-social",
     name: "Sprout Social",
     type: "custom",
-    icon: "🌱",
+    icon: "sprout social",
     description: "Enterprise social media management and publishing.",
     apiKeyLabel: "Sprout Social API Key",
     apiKeyHint: "Settings → API & Integrations",
@@ -31,7 +32,7 @@ const templateConnections: Omit<PlatformConnection, "apiKey" | "isConnected">[] 
     id: "later",
     name: "Later",
     type: "custom",
-    icon: "📅",
+    icon: "later",
     description: "Visual social media planner and scheduler.",
     apiKeyLabel: "Later API Key",
     apiKeyHint: "Account Settings → Integrations → API",
@@ -101,7 +102,7 @@ const IntegrationsPage = () => {
             className="glass rounded-xl p-5 space-y-4"
           >
             <div className="flex items-center gap-3">
-              <span className="text-2xl">{conn.icon}</span>
+              <PlatformIcon platform={conn.name} className="w-5 h-5 text-muted-foreground" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-display font-semibold text-foreground">{conn.name}</h3>
@@ -231,7 +232,7 @@ const IntegrationsPage = () => {
                     onClick={() => handleAddTemplate(tpl)}
                     className="glass rounded-lg p-4 text-left hover:glow-primary transition-all space-y-2"
                   >
-                    <span className="text-2xl">{tpl.icon}</span>
+                    <PlatformIcon platform={tpl.name} className="w-5 h-5 text-muted-foreground" />
                     <h4 className="text-sm font-display font-semibold text-foreground">{tpl.name}</h4>
                     <p className="text-[10px] text-muted-foreground leading-relaxed">{tpl.description}</p>
                   </button>

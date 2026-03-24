@@ -16,7 +16,16 @@ serve(async (req) => {
       throw new Error("BUFFER_ACCESS_TOKEN is not configured. Add it in project secrets.");
     }
 
-    const { action, contents, profileIds } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid or missing JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { action, contents, profileIds } = body;
 
     // Action: list-profiles — returns connected Buffer profiles
     if (action === "list-profiles") {

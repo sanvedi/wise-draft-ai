@@ -22,37 +22,83 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Step 1: Firecrawl branding extraction
     let formattedUrl = url.trim();
     if (!formattedUrl.startsWith("http")) formattedUrl = `https://${formattedUrl}`;
 
     console.log("Extracting branding from:", formattedUrl);
 
+    // Step 1: Scrape homepage for branding data
     const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
       headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         url: formattedUrl,
         formats: ["branding", "markdown"],
-        onlyMainContent: true,
+        onlyMainContent: false, // Get full page including headers/footers for org name
       }),
     });
 
     const scrapeData = await scrapeRes.json();
     if (!scrapeRes.ok) {
-      console.error("Firecrawl error:", scrapeData);
+      console.error("Firecrawl scrape error:", scrapeData);
       if (scrapeRes.status === 402) {
         return new Response(JSON.stringify({ error: "Firecrawl credits exhausted. Please top up your Firecrawl account." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`Firecrawl failed [${scrapeRes.status}]: ${JSON.stringify(scrapeData)}`);
+      throw new Error(`Firecrawl scrape failed [${scrapeRes.status}]: ${JSON.stringify(scrapeData)}`);
     }
 
     const branding = scrapeData.data?.branding || scrapeData.branding || {};
-    const markdown = scrapeData.data?.markdown || scrapeData.markdown || "";
+    const homepageMarkdown = scrapeData.data?.markdown || scrapeData.markdown || "";
+    const metadata = scrapeData.data?.metadata || scrapeData.metadata || {};
 
-    // Step 2: Use Lovable AI to analyze tone, values, and guidelines from the page content
+    // Step 2: Map the site to discover key pages
+    console.log("Mapping site structure...");
+    const mapRes = await fetch("https://api.firecrawl.dev/v1/map", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: formattedUrl,
+        search: "about us mission vision",
+        limit: 10,
+        includeSubdomains: false,
+      }),
+    });
+
+    let additionalContent = "";
+    if (mapRes.ok) {
+      const mapData = await mapRes.json();
+      const siteLinks = mapData.links || mapData.data?.links || [];
+      console.log(`Found ${siteLinks.length} relevant pages`);
+
+      // Scrape up to 3 key pages (about, mission, etc.)
+      const keyPages = siteLinks
+        .filter((link: string) => link !== formattedUrl && link !== formattedUrl + "/")
+        .slice(0, 3);
+
+      for (const pageUrl of keyPages) {
+        try {
+          console.log("Scraping additional page:", pageUrl);
+          const pageRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true }),
+          });
+          if (pageRes.ok) {
+            const pageData = await pageRes.json();
+            const pageMarkdown = pageData.data?.markdown || pageData.markdown || "";
+            additionalContent += `\n\n--- PAGE: ${pageUrl} ---\n${pageMarkdown.slice(0, 2000)}`;
+          }
+        } catch (e) {
+          console.warn("Failed to scrape page:", pageUrl, e);
+        }
+      }
+    }
+
+    // Step 3: Use AI to build comprehensive Brand DNA with org name
+    const fullContent = homepageMarkdown.slice(0, 5000) + additionalContent.slice(0, 5000);
+
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -61,11 +107,11 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a brand strategist. Analyze the website content and extracted branding data to create a comprehensive Brand DNA profile. Focus on: brand tone of voice, core values, content guidelines, and target audience.`,
+            content: `You are a brand strategist. Analyze the website content and extracted branding data to create a comprehensive Brand DNA profile. CRITICAL: Extract the EXACT official organization/company name as it appears on the website. Do not guess or infer — use the name from the page title, header, logo text, or about section.`,
           },
           {
             role: "user",
-            content: `Analyze this brand and return structured insights.\n\nWebsite URL: ${formattedUrl}\n\nExtracted Branding:\n${JSON.stringify(branding, null, 2)}\n\nPage Content (first 3000 chars):\n${markdown.slice(0, 3000)}`,
+            content: `Analyze this brand thoroughly.\n\nWebsite URL: ${formattedUrl}\nPage Title: ${metadata.title || "Unknown"}\nMeta Description: ${metadata.description || "None"}\n\nExtracted Branding:\n${JSON.stringify(branding, null, 2)}\n\nWebsite Content:\n${fullContent}`,
           },
         ],
         tools: [{
@@ -76,6 +122,8 @@ serve(async (req) => {
             parameters: {
               type: "object",
               properties: {
+                organizationName: { type: "string", description: "The EXACT official name of the organization/company/brand as it appears on the website" },
+                tagline: { type: "string", description: "The brand's tagline or slogan if found on the website" },
                 colors: {
                   type: "array",
                   items: {
@@ -94,11 +142,13 @@ serve(async (req) => {
                 guidelines: {
                   type: "array",
                   items: { type: "string" },
-                  description: "5-8 content writing guidelines that match this brand",
+                  description: "5-8 content writing guidelines that match this brand. MUST reference the exact organization name.",
                 },
                 personality: { type: "string", description: "Brand personality in 3-5 adjectives" },
+                keyOfferings: { type: "array", items: { type: "string" }, description: "Key products, services, or programs offered" },
+                websiteSummary: { type: "string", description: "2-3 sentence summary of what the organization does" },
               },
-              required: ["colors", "fonts", "tone", "values", "targetAudience", "guidelines", "personality"],
+              required: ["organizationName", "colors", "fonts", "tone", "values", "targetAudience", "guidelines", "personality", "keyOfferings", "websiteSummary"],
             },
           },
         }],
@@ -128,8 +178,8 @@ serve(async (req) => {
     if (toolCall?.function?.arguments) {
       brandDNA = JSON.parse(toolCall.function.arguments);
     } else {
-      // Fallback: construct from Firecrawl branding data
       brandDNA = {
+        organizationName: metadata.title || "Unknown Organization",
         colors: branding.colors
           ? Object.entries(branding.colors).map(([name, hex]) => ({ name, hex }))
           : [{ name: "Primary", hex: "#2563EB" }],
@@ -139,6 +189,8 @@ serve(async (req) => {
         targetAudience: "General audience",
         guidelines: ["Maintain consistent tone", "Use active voice"],
         personality: "Professional, modern",
+        keyOfferings: [],
+        websiteSummary: "",
       };
     }
 
@@ -147,7 +199,7 @@ serve(async (req) => {
       brandDNA.logo = branding.images.logo;
     }
 
-    console.log("Brand DNA extracted successfully");
+    console.log(`Brand DNA extracted for: ${brandDNA.organizationName}`);
 
     return new Response(JSON.stringify({ success: true, brandDNA }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

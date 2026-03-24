@@ -81,11 +81,15 @@ export const ecosApi = {
 
     const raw = data.brandDNA;
     const brandDNA: BrandDNA & { values?: string[]; targetAudience?: string; personality?: string } = {
+      organizationName: raw.organizationName,
+      tagline: raw.tagline,
       colors: raw.colors || [],
       fonts: raw.fonts || [],
       tone: raw.tone || "",
       logo: raw.logo,
       guidelines: raw.guidelines || [],
+      keyOfferings: raw.keyOfferings,
+      websiteSummary: raw.websiteSummary,
       values: raw.values,
       targetAudience: raw.targetAudience,
       personality: raw.personality,

@@ -182,9 +182,11 @@ serve(async (req) => {
             const data = await bufferGraphQL(`
               mutation CreatePost($input: CreatePostInput!) {
                 createPost(input: $input) {
-                  post {
-                    id
-                    text
+                  ... on PostActionSuccess {
+                    post {
+                      id
+                      text
+                    }
                   }
                 }
               }

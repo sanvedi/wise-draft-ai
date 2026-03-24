@@ -1,5 +1,6 @@
-import { Home, Palette, PenTool, CheckSquare, BarChart3, Sparkles, Plug } from "lucide-react";
+import { Home, Palette, PenTool, CheckSquare, BarChart3, Sparkles, Plug, LogOut } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const location = useLocation();
+  const { user, signOut } = useAuth();
 
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
@@ -72,7 +74,18 @@ export function AppSidebar() {
       </SidebarContent>
 
       {!collapsed && (
-        <div className="mt-auto p-4">
+        <div className="mt-auto p-4 space-y-3">
+          {user && (
+            <div className="glass rounded-lg p-3 flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center text-[10px] font-mono text-primary">
+                {user.email?.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-[10px] font-mono text-muted-foreground truncate flex-1">{user.email}</span>
+              <button onClick={signOut} className="text-muted-foreground hover:text-destructive transition-colors" title="Sign out">
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
           <div className="glass rounded-lg p-3">
             <div className="flex items-center gap-1.5 mb-1">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />

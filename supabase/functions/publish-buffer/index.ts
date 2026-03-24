@@ -77,7 +77,7 @@ serve(async (req) => {
       });
     }
 
-    // Action: list-channels — fetch channels for an organization
+    // Action: list-channels
     if (action === "list-channels") {
       const { organizationId } = body;
       if (!organizationId) {
@@ -107,7 +107,58 @@ serve(async (req) => {
       });
     }
 
-    // Action: publish — create posts on selected channels
+    // Action: get-posts — retrieve recent sent posts for analytics
+    if (action === "get-posts") {
+      const { organizationId, channelIds } = body;
+      if (!organizationId) {
+        return new Response(JSON.stringify({ error: "organizationId is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const filter: any = { status: "sent" };
+      if (channelIds?.length) {
+        filter.channelIds = channelIds;
+      }
+
+      const data = await bufferGraphQL(`
+        query GetPosts($input: PostsInput!) {
+          posts(input: $input) {
+            edges {
+              node {
+                id
+                text
+                status
+                createdAt
+                dueAt
+                channelId
+                channelService
+                via
+              }
+            }
+          }
+        }
+      `, {
+        input: {
+          organizationId,
+          sort: [{ field: "dueAt", direction: "desc" }, { field: "createdAt", direction: "desc" }],
+          filter,
+        },
+      }, BUFFER_ACCESS_TOKEN);
+
+      const posts = data.posts.edges.map((e: any) => e.node);
+
+      return new Response(JSON.stringify({
+        success: true,
+        posts,
+        totalCount: posts.length,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Action: publish
     if (action === "publish") {
       const { contents, channelIds } = body;
       if (!contents || !Array.isArray(contents) || contents.length === 0) {
@@ -171,7 +222,7 @@ serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ error: "Invalid action. Use 'get-organizations', 'list-channels', or 'publish'" }), {
+    return new Response(JSON.stringify({ error: "Invalid action. Use 'get-organizations', 'list-channels', 'get-posts', or 'publish'" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

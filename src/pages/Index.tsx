@@ -12,6 +12,7 @@ import PlatformCard, { PlatformContent } from "@/components/ecos/PlatformCard";
 import OutputPreview from "@/components/ecos/OutputPreview";
 import MetricsBar from "@/components/ecos/MetricsBar";
 import BufferConnect, { BufferChannel } from "@/components/ecos/BufferConnect";
+import BufferAnalytics from "@/components/ecos/BufferAnalytics";
 
 interface AgentState {
   status: AgentStatus;
@@ -49,6 +50,7 @@ const Index = () => {
   const [metrics, setMetrics] = useState({ tokenEfficiency: 0, alignmentDrift: 0, cycleReduction: 0, processingTime: null as number | null });
   const [bufferChannels, setBufferChannels] = useState<BufferChannel[]>([]);
   const [selectedChannelIds, setSelectedChannelIds] = useState<string[]>([]);
+  const [bufferOrgId, setBufferOrgId] = useState<string | null>(null);
 
   const updateAgent = useCallback((name: string, update: Partial<AgentState>) => {
     setAgents((prev) => ({ ...prev, [name]: { ...prev[name], ...update } }));
@@ -257,8 +259,13 @@ const Index = () => {
           <BufferConnect
             channels={bufferChannels}
             selectedChannelIds={selectedChannelIds}
-            onChannelsLoaded={setBufferChannels}
+            onChannelsLoaded={(channels) => setBufferChannels(channels)}
             onSelectionChange={setSelectedChannelIds}
+            onOrgIdLoaded={setBufferOrgId}
+          />
+          <BufferAnalytics
+            organizationId={bufferOrgId}
+            channelIds={selectedChannelIds}
           />
         </div>
 

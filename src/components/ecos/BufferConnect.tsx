@@ -17,9 +17,10 @@ interface BufferConnectProps {
   selectedChannelIds: string[];
   onChannelsLoaded: (channels: BufferChannel[]) => void;
   onSelectionChange: (ids: string[]) => void;
+  onOrgIdLoaded?: (orgId: string) => void;
 }
 
-const BufferConnect = ({ channels, selectedChannelIds, onChannelsLoaded, onSelectionChange }: BufferConnectProps) => {
+const BufferConnect = ({ channels, selectedChannelIds, onChannelsLoaded, onSelectionChange, onOrgIdLoaded }: BufferConnectProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,6 +36,7 @@ const BufferConnect = ({ channels, selectedChannelIds, onChannelsLoaded, onSelec
 
       // Step 2: Get channels for first organization
       const orgId = orgResult.organizations[0].id;
+      onOrgIdLoaded?.(orgId);
       const channelResult = await getBufferChannels(orgId);
       if (!channelResult.success) {
         throw new Error(channelResult.error || "Failed to fetch channels");

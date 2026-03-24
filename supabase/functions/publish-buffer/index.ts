@@ -41,9 +41,6 @@ serve(async (req) => {
 
   try {
     const BUFFER_ACCESS_TOKEN = Deno.env.get("BUFFER_ACCESS_TOKEN");
-    if (!BUFFER_ACCESS_TOKEN) {
-      throw new Error("BUFFER_ACCESS_TOKEN is not configured. Generate one at publish.buffer.com/settings/api");
-    }
 
     let body;
     try {
@@ -57,6 +54,11 @@ serve(async (req) => {
 
     const { action } = body;
 
+    // Allow client-supplied key to override the env secret (enables multi-account)
+    const accessToken = body.accessToken || BUFFER_ACCESS_TOKEN;
+    if (!accessToken) {
+      throw new Error("No Buffer access token available. Set it in Integrations or configure the BUFFER_ACCESS_TOKEN secret.");
+    }
     // Action: get-organizations
     if (action === "get-organizations") {
       const data = await bufferGraphQL(`
@@ -67,7 +69,7 @@ serve(async (req) => {
             }
           }
         }
-      `, {}, BUFFER_ACCESS_TOKEN);
+      `, {}, accessToken);
 
       return new Response(JSON.stringify({
         success: true,
@@ -97,7 +99,7 @@ serve(async (req) => {
             isLocked
           }
         }
-      `, { input: { organizationId } }, BUFFER_ACCESS_TOKEN);
+      `, { input: { organizationId } }, accessToken);
 
       return new Response(JSON.stringify({
         success: true,
@@ -145,7 +147,7 @@ serve(async (req) => {
           sort: [{ field: "dueAt", direction: "desc" }, { field: "createdAt", direction: "desc" }],
           filter,
         },
-      }, BUFFER_ACCESS_TOKEN);
+      }, accessToken);
 
       const posts = data.posts.edges.map((e: any) => e.node);
 
@@ -197,7 +199,7 @@ serve(async (req) => {
                 schedulingType: "automatic",
                 mode: "shareNow",
               },
-            }, BUFFER_ACCESS_TOKEN);
+            }, accessToken);
 
             const result = data.createPost;
             if (result?.post) {

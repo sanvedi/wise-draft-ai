@@ -1,4 +1,4 @@
-import { Home, Palette, PenTool, CheckSquare, BarChart3, Sparkles } from "lucide-react";
+import { Home, Palette, PenTool, CheckSquare, BarChart3, Sparkles, Plug } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import {
@@ -18,6 +18,7 @@ const items = [
   { title: "Generate", url: "/generate", icon: PenTool },
   { title: "Approval", url: "/approval", icon: CheckSquare },
   { title: "Dashboard", url: "/dashboard", icon: BarChart3 },
+  { title: "Integrations", url: "/integrations", icon: Plug },
 ];
 
 export function AppSidebar() {

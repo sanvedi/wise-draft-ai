@@ -36,6 +36,7 @@ const BufferConnect = ({ channels, selectedChannelIds, onChannelsLoaded, onSelec
 
       // Step 2: Get channels for first organization
       const orgId = orgResult.organizations[0].id;
+      onOrgIdLoaded?.(orgId);
       const channelResult = await getBufferChannels(orgId);
       if (!channelResult.success) {
         throw new Error(channelResult.error || "Failed to fetch channels");

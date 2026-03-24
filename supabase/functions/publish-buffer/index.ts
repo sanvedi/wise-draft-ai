@@ -16,17 +16,33 @@ serve(async (req) => {
       throw new Error("BUFFER_ACCESS_TOKEN is not configured. Add it in project secrets.");
     }
 
-    const { action, contents, profileIds } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid or missing JSON body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { action, contents, profileIds } = body;
 
     // Action: list-profiles — returns connected Buffer profiles
     if (action === "list-profiles") {
       const res = await fetch(`${BUFFER_API}/profiles.json?access_token=${BUFFER_ACCESS_TOKEN}`);
-      const profiles = await res.json();
+      const rawText = await res.text();
+      console.log("Buffer list-profiles response status:", res.status, "body:", rawText.substring(0, 500));
 
-      if (!res.ok) {
-        throw new Error(`Buffer API error [${res.status}]: ${JSON.stringify(profiles)}`);
+      let profiles;
+      try {
+        profiles = JSON.parse(rawText);
+      } catch {
+        throw new Error(`Buffer returned non-JSON response [${res.status}]: ${rawText.substring(0, 200)}`);
       }
 
+      if (!res.ok) {
+        throw new Error(`Buffer API error [${res.status}]: ${rawText.substring(0, 200)}`);
+      }
       return new Response(JSON.stringify({
         success: true,
         profiles: profiles.map((p: any) => ({
@@ -72,8 +88,7 @@ serve(async (req) => {
         });
 
         const data = await res.json();
-
-        if (!res.ok) {
+         if (!res.ok) {
           console.error(`Buffer post error for ${item.platform}:`, data);
           results.push({ platform: item.platform, success: false, error: data.message || "Failed" });
         } else {

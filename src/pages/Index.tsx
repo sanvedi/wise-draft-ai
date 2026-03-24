@@ -33,7 +33,7 @@ const defaultPlatforms: PlatformContent[] = [
   { platform: "X", icon: "𝕏", status: "idle", mediaSupport: ["text", "image", "video"], characterLimit: 280, format: "Tweet / Thread" },
   { platform: "LinkedIn", icon: "💼", status: "idle", mediaSupport: ["text", "image", "document", "video"], characterLimit: 3000, format: "Post / Article" },
   { platform: "Facebook", icon: "📘", status: "idle", mediaSupport: ["text", "image", "video", "link"], format: "Post / Story" },
-  { platform: "WordPress", icon: "📝", status: "idle", mediaSupport: ["text", "image", "html"], format: "Blog Post" },
+  { platform: "Google Business", icon: "📍", status: "idle", mediaSupport: ["text", "image", "link"], characterLimit: 1500, format: "Business Update" },
 ];
 
 const Index = () => {
@@ -139,7 +139,7 @@ const Index = () => {
       for (const item of result.contents) {
         updatePlatform(item.platform, { status: "preview", content: item.content });
       }
-      updateAgent("customizer", { status: "complete", output: `${result.contents.length} platform variants ready` });
+      updateAgent("customizer", { status: "complete", output: `${result.contents.length} viral-optimized platform variants ready — awaiting human approval` });
 
       const firstContent = result.contents[0]?.content || null;
       setPreviewContent(firstContent);
@@ -223,7 +223,7 @@ const Index = () => {
   const agentConfig = [
     { key: "drafter", name: "Drafter", subtitle: "Knowledge Architect", model: "Gemini 3 Flash", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
     { key: "reviewer", name: "Reviewer", subtitle: "Compliance & Governance", model: "AI Critic (RLAIF)", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
-    { key: "customizer", name: "Customizer", subtitle: "Multimodal Adaptation", model: "Platform Optimizer", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
+    { key: "customizer", name: "Customizer", subtitle: "Viral Content Optimizer", model: "Platform Optimizer", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
     { key: "publisher", name: "Publisher", subtitle: "API Integrator", model: "Distribution Engine", icon: Rocket, colorClass: "text-agent-publisher", glowClass: "glow-agent-publisher" },
   ];
 

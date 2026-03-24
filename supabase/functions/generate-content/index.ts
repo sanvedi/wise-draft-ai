@@ -6,12 +6,12 @@ const corsHeaders = {
 };
 
 const platformSpecs: Record<string, { charLimit: number; format: string; instruction: string }> = {
-  Instagram: { charLimit: 2200, format: "Post caption with hashtags", instruction: "Write an engaging Instagram caption. Use emojis, line breaks for readability, and 5-10 relevant hashtags at the end. Keep it visual and engaging." },
-  YouTube: { charLimit: 5000, format: "Title + Description + Tags", instruction: "Create a YouTube video title (max 100 chars), a detailed description with timestamps, and comma-separated tags. Make the title clickable but not clickbait." },
-  X: { charLimit: 280, format: "Tweet or Thread", instruction: "Write a concise tweet under 280 characters. If the content is rich, create a thread (label as 1/N). Use 1-2 hashtags max." },
-  LinkedIn: { charLimit: 3000, format: "Professional post", instruction: "Write a professional LinkedIn post. Start with a hook, use short paragraphs, include data/insights, end with a question or CTA. Keep it authentic and thought-leadership oriented." },
-  Facebook: { charLimit: 63206, format: "Post with CTA", instruction: "Write a Facebook post that's conversational and shareable. Include a clear call-to-action. Optimize for engagement (comments, shares)." },
-  WordPress: { charLimit: 50000, format: "Blog post in Markdown", instruction: "Write a full blog post in Markdown with H1 title, H2 sections, introduction, body with key takeaways, and conclusion. Include meta description suggestion." },
+  Instagram: { charLimit: 2200, format: "Post caption with hashtags", instruction: "Write a VIRAL Instagram caption. Use pattern interrupts, emojis, line breaks for readability, a powerful hook in the first line, and 5-10 trending hashtags. Make it scroll-stopping and shareable." },
+  YouTube: { charLimit: 5000, format: "Title + Description + Tags", instruction: "Create a VIRAL YouTube video title (max 100 chars) that drives curiosity and clicks. Write a description with timestamps and SEO keywords. Make the title irresistible but authentic — use power words, numbers, and emotional triggers." },
+  X: { charLimit: 280, format: "Tweet or Thread", instruction: "Write a VIRAL tweet under 280 characters. Use a hot take, controversial angle, or surprising stat. If the content is rich, create a thread (1/N) with a cliffhanger opener. Maximize retweets and quote tweets." },
+  LinkedIn: { charLimit: 3000, format: "Professional post", instruction: "Write a VIRAL LinkedIn post. Start with a bold, pattern-breaking hook (1 short sentence). Use short 1-2 line paragraphs. Include a personal angle or surprising data point. End with a polarizing question that drives comments. Make it feel authentic, not corporate." },
+  Facebook: { charLimit: 63206, format: "Post with CTA", instruction: "Write a VIRAL Facebook post that triggers sharing. Use storytelling, emotional hooks, and a clear call-to-action. Optimize for comments and shares — ask questions, use 'tag someone who...' patterns." },
+  "Google Business": { charLimit: 1500, format: "Business Update", instruction: "Write a compelling Google Business Profile update. Keep it local, action-oriented, and include a clear CTA (visit, call, book). Use keywords relevant to local search. Keep it concise and professional but engaging." },
 };
 
 serve(async (req) => {
@@ -48,7 +48,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are an expert content marketing strategist and copywriter. You create platform-optimized content that is on-brand, engaging, and tailored for each platform's unique audience and format requirements.${brandContext}`,
+            content: `You are an elite viral content strategist and copywriter. Your job is to create VIRAL-WORTHY content that maximizes engagement, shares, and reach on each platform. You understand platform algorithms, trending formats, psychological triggers (curiosity gaps, pattern interrupts, emotional hooks), and what makes content go viral. Every piece must be scroll-stopping, shareable, and on-brand.${brandContext}`,
           },
           {
             role: "user",
@@ -68,7 +68,7 @@ serve(async (req) => {
                   items: {
                     type: "object",
                     properties: {
-                      platform: { type: "string", enum: ["Instagram", "YouTube", "X", "LinkedIn", "Facebook", "WordPress"] },
+                      platform: { type: "string", enum: ["Instagram", "YouTube", "X", "LinkedIn", "Facebook", "Google Business"] },
                       content: { type: "string", description: "The generated content for this platform" },
                       hashtags: { type: "array", items: { type: "string" }, description: "Relevant hashtags if applicable" },
                       suggestedMediaPlacement: { type: "string", description: "How to use the provided media assets" },

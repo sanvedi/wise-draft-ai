@@ -198,12 +198,12 @@ serve(async (req) => {
             }, BUFFER_ACCESS_TOKEN);
 
             const result = data.createPost;
-            if (result.post) {
+            if (result?.post) {
               console.log(`Buffer post success: ${item.platform} → ${channelId}`);
               results.push({ platform: item.platform, channelId, success: true, postId: result.post.id });
             } else {
-              console.error(`Buffer post error: ${result.message}`);
-              results.push({ platform: item.platform, channelId, success: false, error: result.message });
+              console.error(`Buffer post error: unexpected response`, JSON.stringify(result));
+              results.push({ platform: item.platform, channelId, success: false, error: "Unexpected response from Buffer" });
             }
           } catch (e) {
             console.error(`Buffer post exception for ${item.platform}:`, e);

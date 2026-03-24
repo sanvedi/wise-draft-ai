@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { BookOpen, ShieldCheck, Palette, Rocket } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ecosApi } from "@/lib/api/ecos";
+import { ecosApi, publishViaZapier } from "@/lib/api/ecos";
 import Header from "@/components/ecos/Header";
 import AgentCard, { AgentStatus } from "@/components/ecos/AgentCard";
 import PipelineConnector from "@/components/ecos/PipelineConnector";
@@ -11,6 +11,7 @@ import BrandDNAPanel, { BrandDNA } from "@/components/ecos/BrandDNAPanel";
 import PlatformCard, { PlatformContent } from "@/components/ecos/PlatformCard";
 import OutputPreview from "@/components/ecos/OutputPreview";
 import MetricsBar from "@/components/ecos/MetricsBar";
+import ZapierWebhookInput from "@/components/ecos/ZapierWebhookInput";
 
 interface AgentState {
   status: AgentStatus;
@@ -46,6 +47,7 @@ const Index = () => {
   const [fullBrandDNA, setFullBrandDNA] = useState<any>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [metrics, setMetrics] = useState({ tokenEfficiency: 0, alignmentDrift: 0, cycleReduction: 0, processingTime: null as number | null });
+  const [zapierWebhookUrl, setZapierWebhookUrl] = useState("");
 
   const updateAgent = useCallback((name: string, update: Partial<AgentState>) => {
     setAgents((prev) => ({ ...prev, [name]: { ...prev[name], ...update } }));
@@ -165,26 +167,49 @@ const Index = () => {
   }, [fullBrandDNA, updateAgent, updatePlatform, toast]);
 
   const handlePublish = useCallback(async (platform: string) => {
-    updatePlatform(platform, { status: "publishing" as any });
-    // TODO: Real API integration per platform
-    await new Promise((r) => setTimeout(r, 1500));
-    updatePlatform(platform, { status: "published" });
-    toast({ title: "Published", description: `Content published to ${platform}` });
-  }, [updatePlatform, toast]);
+    const platformData = platforms.find((p) => p.platform === platform);
+    if (!platformData?.content) return;
+
+    if (zapierWebhookUrl) {
+      updatePlatform(platform, { status: "publishing" as any });
+      const result = await publishViaZapier(zapierWebhookUrl, [{ platform, content: platformData.content }]);
+      if (result.success) {
+        updatePlatform(platform, { status: "published" });
+        toast({ title: "Sent to Zapier", description: `${platform} content sent to your Zap` });
+      } else {
+        updatePlatform(platform, { status: "failed" });
+        toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
+      }
+    } else {
+      toast({ title: "No Webhook", description: "Add your Zapier webhook URL first", variant: "destructive" });
+    }
+  }, [platforms, zapierWebhookUrl, updatePlatform, toast]);
 
   const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
+    if (!zapierWebhookUrl) {
+      toast({ title: "No Webhook", description: "Add your Zapier webhook URL first", variant: "destructive" });
+      return;
+    }
     updateAgent("publisher", { status: "running" });
     setPreviewStatus("approved");
-    for (const p of platforms) {
-      if (p.status === "preview") {
-        updatePlatform(p.platform, { status: "publishing" as any });
-        await new Promise((r) => setTimeout(r, 600));
+
+    const contentsToPublish = platforms
+      .filter((p) => p.status === "preview" && p.content)
+      .map((p) => ({ platform: p.platform, content: p.content! }));
+
+    const result = await publishViaZapier(zapierWebhookUrl, contentsToPublish);
+
+    if (result.success) {
+      for (const p of contentsToPublish) {
         updatePlatform(p.platform, { status: "published" });
       }
+      updateAgent("publisher", { status: "complete", output: `Sent ${contentsToPublish.length} posts to Zapier • RLHF data captured (${rating}★)${feedback ? ` • "${feedback}"` : ""}` });
+      toast({ title: "All Sent to Zapier", description: `${contentsToPublish.length} platform posts sent (${rating}★ rating captured)` });
+    } else {
+      updateAgent("publisher", { status: "failed", output: result.error });
+      toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
     }
-    updateAgent("publisher", { status: "complete", output: `Published to all platforms • RLHF data captured (${rating}★)${feedback ? ` • "${feedback}"` : ""}` });
-    toast({ title: "All Published", description: `Content distributed to all platforms (${rating}★ rating captured)` });
-  }, [platforms, updateAgent, updatePlatform, toast]);
+  }, [platforms, zapierWebhookUrl, updateAgent, updatePlatform, toast]);
 
   const handleReject = useCallback(() => {
     setPreviewStatus("generating");
@@ -234,6 +259,7 @@ const Index = () => {
           <MultimodalInput onSubmit={runPipeline} isProcessing={isRunning} />
           <InputAnalyzer media={media} />
           <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
+          <ZapierWebhookInput webhookUrl={zapierWebhookUrl} onSave={setZapierWebhookUrl} />
         </div>
 
         <div className="lg:col-span-3 space-y-4">

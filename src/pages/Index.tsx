@@ -11,7 +11,7 @@ import BrandDNAPanel, { BrandDNA } from "@/components/ecos/BrandDNAPanel";
 import PlatformCard, { PlatformContent } from "@/components/ecos/PlatformCard";
 import OutputPreview from "@/components/ecos/OutputPreview";
 import MetricsBar from "@/components/ecos/MetricsBar";
-import ZapierWebhookInput from "@/components/ecos/ZapierWebhookInput";
+import WebhookInput from "@/components/ecos/ZapierWebhookInput";
 
 interface AgentState {
   status: AgentStatus;

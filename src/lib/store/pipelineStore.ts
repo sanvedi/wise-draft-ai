@@ -11,12 +11,12 @@ interface AgentState {
 }
 
 const defaultPlatforms: PlatformContent[] = [
-  { platform: "Instagram", icon: "📸", status: "idle", mediaSupport: ["image", "video", "carousel"], characterLimit: 2200, format: "Post / Reel" },
-  { platform: "YouTube", icon: "▶️", status: "idle", mediaSupport: ["video", "shorts"], format: "Video / Short" },
-  { platform: "X", icon: "𝕏", status: "idle", mediaSupport: ["text", "image", "video"], characterLimit: 280, format: "Tweet / Thread" },
-  { platform: "LinkedIn", icon: "💼", status: "idle", mediaSupport: ["text", "image", "document", "video"], characterLimit: 3000, format: "Post / Article" },
-  { platform: "Facebook", icon: "📘", status: "idle", mediaSupport: ["text", "image", "video", "link"], format: "Post / Story" },
-  { platform: "Google Business", icon: "📍", status: "idle", mediaSupport: ["text", "image", "link"], characterLimit: 1500, format: "Business Update" },
+  { platform: "Instagram", icon: "instagram", status: "idle", mediaSupport: ["image", "video", "carousel"], characterLimit: 2200, format: "Post / Reel" },
+  { platform: "YouTube", icon: "youtube", status: "idle", mediaSupport: ["video", "shorts"], format: "Video / Short" },
+  { platform: "X", icon: "x", status: "idle", mediaSupport: ["text", "image", "video"], characterLimit: 280, format: "Tweet / Thread" },
+  { platform: "LinkedIn", icon: "linkedin", status: "idle", mediaSupport: ["text", "image", "document", "video"], characterLimit: 3000, format: "Post / Article" },
+  { platform: "Facebook", icon: "facebook", status: "idle", mediaSupport: ["text", "image", "video", "link"], format: "Post / Story" },
+  { platform: "Google Business", icon: "google business", status: "idle", mediaSupport: ["text", "image", "link"], characterLimit: 1500, format: "Business Update" },
 ];
 
 const initialAgents: Record<string, AgentState> = {

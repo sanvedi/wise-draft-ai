@@ -135,7 +135,7 @@ const GeneratePage = () => {
       {!fullBrandDNA && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-4 border-agent-reviewer/30">
           <p className="text-sm text-agent-reviewer">
-            ⚠️ No Brand DNA loaded. Content will be generated without brand compliance checks.{" "}
+            No Brand DNA loaded. Content will be generated without brand compliance checks.{" "}
             <button onClick={() => navigate("/brand")} className="underline hover:text-foreground">Set up Brand Assets →</button>
           </p>
         </motion.div>

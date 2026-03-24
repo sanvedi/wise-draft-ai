@@ -1,113 +1,105 @@
 import { motion } from "framer-motion";
-import { BookOpen, ShieldCheck, Palette, Rocket, Brain, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 const agents = [
-  { name: "Drafter", subtitle: "Content Architect", model: "Gemini 3 Flash", icon: BookOpen, color: "agent-drafter", desc: "Creates initial content drafts optimized for each platform" },
-  { name: "Reviewer", subtitle: "Brand Compliance", model: "GPT-5 Mini (RLAIF)", icon: ShieldCheck, color: "agent-reviewer", desc: "Audits content against brand DNA and guidelines" },
-  { name: "Customizer", subtitle: "Viral Optimizer", model: "Gemini 2.5 Pro", icon: Palette, color: "agent-customizer", desc: "Transforms content into viral-worthy platform variants" },
-  { name: "Publisher", subtitle: "Distribution", model: "Buffer API", icon: Rocket, color: "agent-publisher", desc: "Distributes approved content across all channels" },
-  { name: "Learner", subtitle: "Analytics AI", model: "GPT-5 Mini", icon: Brain, color: "agent-learner", desc: "Learns from post performance to improve future content" },
+  { name: "Drafter", role: "Content Architect", model: "Gemini 3 Flash", step: "01", desc: "Generates initial content drafts tailored to each platform's format and audience expectations." },
+  { name: "Reviewer", role: "Brand Compliance", model: "GPT-5 Mini", step: "02", desc: "Validates every draft against your brand DNA — tone, terminology, visual identity, and guidelines." },
+  { name: "Customizer", role: "Viral Optimizer", model: "Gemini 2.5 Pro", step: "03", desc: "Rewrites content for maximum engagement using platform-specific hooks, hashtags, and formatting." },
+  { name: "Publisher", role: "Distribution", model: "Buffer API", step: "04", desc: "Pushes approved content to your connected channels with proper scheduling and targeting." },
+  { name: "Learner", role: "Analytics AI", model: "GPT-5 Mini", step: "05", desc: "Studies post performance over time and feeds insights back to improve future content quality." },
 ];
 
 const HomePage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="px-6 py-8 max-w-6xl mx-auto space-y-16">
-      {/* Hero */}
+    <div className="px-6 py-12 max-w-5xl mx-auto">
+      {/* Hero — left-aligned, editorial feel */}
       <motion.section
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center space-y-6 pt-8"
+        transition={{ duration: 0.5 }}
+        className="max-w-2xl space-y-5 mb-20"
       >
-        <motion.div
-          initial={{ scale: 0.8 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200 }}
-          className="inline-flex p-4 rounded-2xl bg-primary/10 glow-primary"
-        >
-          <Sparkles className="w-10 h-10 text-primary" />
-        </motion.div>
-        <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tight">
+        <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
+          Multi-Agent Content Engine
+        </p>
+        <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight leading-[1.1]">
           Sutra <span className="text-gradient">Pravartak</span>
         </h1>
-        <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          AI-powered multi-agent content engine that drafts, reviews, optimizes, and publishes
-          viral-worthy content across every platform — with human oversight at every step.
+        <p className="text-base text-muted-foreground leading-relaxed max-w-lg">
+          Five AI agents draft, review, optimize, and publish your content
+          across every platform — with your approval at every step.
         </p>
-        <div className="flex gap-4 justify-center">
+        <div className="flex gap-3 pt-2">
           <Button
             onClick={() => navigate("/brand")}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 font-display text-sm px-6 py-5 rounded-xl glow-primary"
+            className="bg-primary text-primary-foreground hover:bg-primary/90 font-display text-sm px-5 py-5 rounded-lg"
           >
-            Get Started <ArrowRight className="w-4 h-4 ml-2" />
+            Get Started <ArrowRight className="w-4 h-4 ml-1.5" />
           </Button>
           <Button
             variant="outline"
             onClick={() => navigate("/generate")}
-            className="border-border text-foreground hover:bg-muted font-display text-sm px-6 py-5 rounded-xl"
+            className="border-border text-foreground hover:bg-muted font-display text-sm px-5 py-5 rounded-lg"
           >
             Skip to Generate
           </Button>
         </div>
       </motion.section>
 
-      {/* Process Flow */}
-      <section className="space-y-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-display font-bold text-foreground">Agent Pipeline</h2>
-          <p className="text-sm text-muted-foreground mt-2">Five specialized AI agents work in sequence to create perfect content</p>
-        </div>
+      {/* Pipeline — numbered list, no icons, clean hierarchy */}
+      <section className="mb-16">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.15 }}
+          className="mb-8"
+        >
+          <h2 className="text-xl font-display font-semibold text-foreground">How it works</h2>
+          <p className="text-sm text-muted-foreground mt-1">Each agent handles a distinct stage of the content lifecycle.</p>
+        </motion.div>
 
-        <div className="relative">
-          {/* Connection line */}
-          <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-border to-transparent hidden lg:block" />
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            {agents.map((agent, i) => (
-              <motion.div
-                key={agent.name}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.12 }}
-                className="glass rounded-xl p-5 space-y-3 relative group hover:glow-primary transition-all duration-500"
-              >
-                <div className="glass-highlight absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`p-2 rounded-lg bg-${agent.color}/10`}>
-                      <agent.icon className={`w-5 h-5 text-${agent.color}`} />
-                    </div>
-                    <span className="text-[9px] font-mono text-muted-foreground bg-muted/50 px-2 py-0.5 rounded-full">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                  </div>
+        <div className="space-y-3">
+          {agents.map((agent, i) => (
+            <motion.div
+              key={agent.name}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 + i * 0.08 }}
+              className="group rounded-lg border border-border bg-card/60 hover:bg-card transition-colors px-5 py-4 flex items-start gap-5"
+            >
+              <span className="text-xs font-mono text-muted-foreground pt-0.5 w-5 flex-shrink-0">
+                {agent.step}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2 flex-wrap">
                   <h3 className="text-sm font-display font-semibold text-foreground">{agent.name}</h3>
-                  <p className="text-[10px] font-mono text-muted-foreground mt-0.5">{agent.subtitle}</p>
-                  <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{agent.desc}</p>
-                  <div className="mt-3 text-[9px] font-mono text-primary/60 bg-primary/5 rounded-md px-2 py-1">
-                    {agent.model}
-                  </div>
+                  <span className="text-xs text-muted-foreground">{agent.role}</span>
                 </div>
-              </motion.div>
-            ))}
-          </div>
+                <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{agent.desc}</p>
+              </div>
+              <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 rounded px-2 py-0.5 flex-shrink-0 mt-0.5">
+                {agent.model}
+              </span>
+            </motion.div>
+          ))}
         </div>
       </section>
 
-      {/* HITL callout */}
+      {/* HITL — understated, not glowing */}
       <motion.section
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
-        className="glass rounded-2xl p-8 text-center space-y-3 glow-accent"
+        className="rounded-lg border border-border bg-card/60 px-6 py-6 max-w-2xl"
       >
-        <h3 className="text-lg font-display font-bold text-foreground">Human-in-the-Loop Approval</h3>
-        <p className="text-sm text-muted-foreground max-w-xl mx-auto">
-          Nothing publishes without your explicit approval. Rate content for RLHF training,
-          provide feedback, and iterate until it's perfect.
+        <h3 className="text-sm font-display font-semibold text-foreground mb-1.5">Human-in-the-Loop</h3>
+        <p className="text-sm text-muted-foreground leading-relaxed">
+          Nothing publishes without your explicit approval. Rate outputs to improve
+          future generations, provide feedback, and iterate until the content is right.
         </p>
       </motion.section>
     </div>

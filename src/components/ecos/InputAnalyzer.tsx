@@ -26,7 +26,7 @@ const analyzePlatformFit = (item: MediaItem): PlatformFit[] => {
       { platform: "X", icon: "𝕏", fit: w >= 600 ? "optimal" : "compatible", reason: w >= 600 ? "Good resolution" : "Low resolution" },
       { platform: "LinkedIn", icon: "💼", fit: ratio > 1.5 ? "optimal" : "compatible", reason: ratio > 1.5 ? "Landscape ideal" : "Acceptable" },
       { platform: "Facebook", icon: "📘", fit: "optimal", reason: "All formats accepted" },
-      { platform: "WordPress", icon: "📝", fit: "optimal", reason: "Featured image ready" },
+      { platform: "Google Biz", icon: "📍", fit: "optimal", reason: "Featured image ready" },
     ];
   }
 
@@ -37,7 +37,7 @@ const analyzePlatformFit = (item: MediaItem): PlatformFit[] => {
       { platform: "X", icon: "𝕏", fit: dur <= 140 ? "optimal" : "incompatible", reason: dur <= 140 ? "Within limit" : "Exceeds 2:20 limit" },
       { platform: "LinkedIn", icon: "💼", fit: dur <= 600 ? "optimal" : "compatible", reason: dur <= 600 ? "Within limit" : "May need trimming" },
       { platform: "Facebook", icon: "📘", fit: "optimal", reason: "All durations accepted" },
-      { platform: "WordPress", icon: "📝", fit: "compatible", reason: "Embed supported" },
+      { platform: "Google Biz", icon: "📍", fit: "compatible", reason: "Update supported" },
     ];
   }
 
@@ -47,7 +47,7 @@ const analyzePlatformFit = (item: MediaItem): PlatformFit[] => {
     { platform: "X", icon: "𝕏", fit: "compatible", reason: "Link sharing" },
     { platform: "LinkedIn", icon: "💼", fit: "optimal", reason: "Document sharing" },
     { platform: "Facebook", icon: "📘", fit: "compatible", reason: "Link sharing" },
-    { platform: "WordPress", icon: "📝", fit: "optimal", reason: "Content embedding" },
+    { platform: "Google Biz", icon: "📍", fit: "compatible", reason: "Link sharing" },
   ];
 };
 

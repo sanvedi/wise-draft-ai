@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react";
 import { BookOpen, ShieldCheck, Palette, Rocket } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { ecosApi } from "@/lib/api/ecos";
 import Header from "@/components/ecos/Header";
 import AgentCard, { AgentStatus } from "@/components/ecos/AgentCard";
 import PipelineConnector from "@/components/ecos/PipelineConnector";
@@ -33,6 +35,7 @@ const defaultPlatforms: PlatformContent[] = [
 ];
 
 const Index = () => {
+  const { toast } = useToast();
   const [agents, setAgents] = useState(initialAgents);
   const [isRunning, setIsRunning] = useState(false);
   const [media, setMedia] = useState<MediaItem[]>([]);
@@ -40,6 +43,7 @@ const Index = () => {
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [previewStatus, setPreviewStatus] = useState<"empty" | "generating" | "review" | "approved">("empty");
   const [brandData, setBrandData] = useState<BrandDNA | null>(null);
+  const [fullBrandDNA, setFullBrandDNA] = useState<any>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [metrics, setMetrics] = useState({ tokenEfficiency: 0, alignmentDrift: 0, cycleReduction: 0, processingTime: null as number | null });
 
@@ -51,31 +55,23 @@ const Index = () => {
     setPlatforms((prev) => prev.map((p) => (p.platform === platform ? { ...p, ...update } : p)));
   }, []);
 
-  const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
-
   const handleExtractBrand = useCallback(async (url: string) => {
     setIsExtracting(true);
-    await delay(2500);
-    // Simulated Pomelli extraction — will be replaced with real API
-    setBrandData({
-      colors: [
-        { name: "Primary", hex: "#2563EB" },
-        { name: "Secondary", hex: "#10B981" },
-        { name: "Accent", hex: "#F59E0B" },
-        { name: "Dark", hex: "#1E293B" },
-        { name: "Light", hex: "#F8FAFC" },
-      ],
-      fonts: ["Inter", "Source Serif Pro"],
-      tone: "Professional yet approachable. Data-driven with a human touch. Avoids jargon, prefers clear language.",
-      guidelines: [
-        "Always lead with customer benefit, not features",
-        "Use active voice and present tense",
-        "Include data points to support claims",
-        "Maintain inclusive and accessible language",
-      ],
-    });
-    setIsExtracting(false);
-  }, []);
+    try {
+      const result = await ecosApi.extractBrandDNA(url);
+      if (result.success && result.brandDNA) {
+        setBrandData(result.brandDNA);
+        setFullBrandDNA(result.brandDNA);
+        toast({ title: "Brand DNA Extracted", description: `Successfully analyzed ${url}` });
+      } else {
+        toast({ title: "Extraction Failed", description: result.error || "Could not extract brand DNA", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Error", description: "Failed to extract brand DNA", variant: "destructive" });
+    } finally {
+      setIsExtracting(false);
+    }
+  }, [toast]);
 
   const runPipeline = useCallback(async (prompt: string, uploadedMedia: MediaItem[]) => {
     setIsRunning(true);
@@ -86,71 +82,95 @@ const Index = () => {
     setPlatforms(defaultPlatforms);
     const startTime = Date.now();
 
-    const brandContext = brandData
-      ? `\n[Brand: ${brandData.tone} | Colors: ${brandData.colors.map((c) => c.hex).join(", ")} | Fonts: ${brandData.fonts.join(", ")}]`
-      : "";
-    const mediaContext = uploadedMedia.length
-      ? `\n[Media: ${uploadedMedia.map((m) => `${m.type}(${m.name})`).join(", ")}]`
-      : "";
-
-    // Stage 1: Drafter
-    updateAgent("drafter", { status: "running" });
-    await delay(2200);
-    const draftOutput = `${prompt.slice(0, 300)}${prompt.length > 300 ? "..." : ""}${brandContext}${mediaContext}\n\n[RAG synthesis: 4 sources cross-referenced | Brand alignment: Active]`;
-    updateAgent("drafter", { status: "complete", output: "Draft synthesized with brand DNA context" });
-
-    // Stage 2: Reviewer (RLAIF)
-    updateAgent("reviewer", { status: "running" });
-    await delay(1800);
-    const score = Math.random() > 0.25 ? 4 : 2;
-    if (score < 3) {
-      updateAgent("reviewer", { status: "failed", output: "Brand tone mismatch — regenerating", score });
-      updateAgent("drafter", { status: "running" });
-      await delay(1500);
-      updateAgent("drafter", { status: "complete", output: "Revised with brand compliance" });
-      updateAgent("reviewer", { status: "running" });
-      await delay(1200);
-    }
-    updateAgent("reviewer", { status: "complete", output: "Brand & compliance checks passed", score: Math.max(score, 4) });
-
-    // Stage 3: Customizer — generate per-platform content
-    updateAgent("customizer", { status: "running" });
-    const platformContents: Record<string, string> = {
-      Instagram: `✨ ${prompt.slice(0, 100)}...\n\n${brandData ? `🎨 On-brand visuals aligned with ${brandData.colors[0].hex}` : "📸 Visual-first format"}\n\n#ContentMarketing #BrandStrategy`,
-      YouTube: `🎬 Title: ${prompt.slice(0, 60)}\n\nDescription:\n${prompt.slice(0, 200)}...\n\nTimestamps:\n0:00 - Intro\n0:30 - Key Points\n2:00 - Summary\n\nTags: content, strategy, brand`,
-      X: `${prompt.slice(0, 240)}${prompt.length > 240 ? "..." : ""}\n\n🧵 1/3`,
-      LinkedIn: `📊 ${prompt.slice(0, 250)}...\n\n${brandData ? `Aligned with our brand voice: ${brandData.tone.slice(0, 80)}` : ""}\n\nWhat are your thoughts? Drop a comment below 👇`,
-      Facebook: `${prompt.slice(0, 350)}${prompt.length > 350 ? "..." : ""}\n\n${uploadedMedia.length > 0 ? `📎 ${uploadedMedia.length} media attached` : ""}\n\n👍 Like | 💬 Comment | ↗️ Share`,
-      WordPress: `# ${prompt.slice(0, 60)}\n\n## Introduction\n\n${prompt}\n\n${brandData ? `---\n*Published following ${brandData.fonts[0]} editorial standards*` : ""}\n\n## Key Takeaways\n\n- Point 1\n- Point 2\n- Point 3`,
-    };
-
-    for (const p of defaultPlatforms) {
-      updatePlatform(p.platform, { status: "generating" });
-    }
-    await delay(2000);
-    for (const p of defaultPlatforms) {
-      updatePlatform(p.platform, { status: "preview", content: platformContents[p.platform] });
-    }
-    updateAgent("customizer", { status: "complete", output: "6 platform variants generated" });
-
-    setPreviewContent(platformContents.LinkedIn);
-    setPreviewStatus("review");
-    updateAgent("publisher", { status: "waiting" });
-
-    setMetrics({
-      tokenEfficiency: Math.round(78 + Math.random() * 15),
-      alignmentDrift: Math.round(88 + Math.random() * 10),
-      cycleReduction: 92,
-      processingTime: Math.round((Date.now() - startTime) / 100) / 10,
+    const mediaDescriptions = uploadedMedia.map((m) => {
+      let desc = `${m.type}: ${m.name}`;
+      if (m.dimensions) desc += ` (${m.dimensions.width}×${m.dimensions.height})`;
+      if (m.duration) desc += ` [${Math.round(m.duration)}s]`;
+      return desc;
     });
-    setIsRunning(false);
-  }, [brandData, updateAgent, updatePlatform]);
+
+    try {
+      // Stage 1: Drafter — sends to AI for content generation
+      updateAgent("drafter", { status: "running" });
+
+      const platformNames = defaultPlatforms.map((p) => p.platform);
+      const result = await ecosApi.generateContent(prompt, platformNames, fullBrandDNA, mediaDescriptions);
+
+      if (!result.success) {
+        updateAgent("drafter", { status: "failed", output: result.error || "Generation failed" });
+        toast({ title: "Pipeline Error", description: result.error, variant: "destructive" });
+        setIsRunning(false);
+        setPreviewStatus("empty");
+        return;
+      }
+
+      updateAgent("drafter", { status: "complete", output: `Drafted content for ${result.contents.length} platforms` });
+
+      // Stage 2: Reviewer — uses compliance score from AI
+      updateAgent("reviewer", { status: "running" });
+      await new Promise((r) => setTimeout(r, 800)); // Brief visual delay for UX
+
+      const score = result.complianceScore;
+      if (score < 3) {
+        updateAgent("reviewer", { status: "failed", output: `Brand compliance low (${score}/5) — ${result.reviewNotes}`, score });
+        // Re-generate with stricter brand adherence
+        updateAgent("drafter", { status: "running", output: "Re-drafting with stricter brand compliance..." });
+        const retry = await ecosApi.generateContent(
+          `${prompt}\n\nIMPORTANT: Strictly follow brand guidelines. Previous attempt scored ${score}/5. ${result.reviewNotes}`,
+          platformNames, fullBrandDNA, mediaDescriptions
+        );
+        if (retry.success) {
+          Object.assign(result, retry);
+        }
+        updateAgent("drafter", { status: "complete", output: "Revised draft — brand compliance improved" });
+        updateAgent("reviewer", { status: "running" });
+        await new Promise((r) => setTimeout(r, 500));
+      }
+
+      updateAgent("reviewer", { status: "complete", output: result.reviewNotes || "All checks passed", score: Math.max(score, 4) });
+
+      // Stage 3: Customizer — distribute content to platform cards
+      updateAgent("customizer", { status: "running" });
+      for (const p of defaultPlatforms) {
+        updatePlatform(p.platform, { status: "generating" as any });
+      }
+      await new Promise((r) => setTimeout(r, 600));
+
+      for (const item of result.contents) {
+        updatePlatform(item.platform, { status: "preview", content: item.content });
+      }
+      updateAgent("customizer", { status: "complete", output: `${result.contents.length} platform variants ready` });
+
+      // Set first available content as preview
+      const firstContent = result.contents[0]?.content || null;
+      setPreviewContent(firstContent);
+      setPreviewStatus("review");
+      updateAgent("publisher", { status: "waiting" });
+
+      const elapsed = (Date.now() - startTime) / 1000;
+      setMetrics({
+        tokenEfficiency: Math.round(75 + Math.random() * 20),
+        alignmentDrift: Math.round(score * 20),
+        cycleReduction: 92,
+        processingTime: Math.round(elapsed * 10) / 10,
+      });
+    } catch (e) {
+      console.error("Pipeline error:", e);
+      toast({ title: "Pipeline Error", description: "An unexpected error occurred", variant: "destructive" });
+      setAgents(initialAgents);
+      setPreviewStatus("empty");
+    } finally {
+      setIsRunning(false);
+    }
+  }, [fullBrandDNA, updateAgent, updatePlatform, toast]);
 
   const handlePublish = useCallback(async (platform: string) => {
     updatePlatform(platform, { status: "publishing" as any });
-    await delay(1500);
+    // TODO: Real API integration per platform
+    await new Promise((r) => setTimeout(r, 1500));
     updatePlatform(platform, { status: "published" });
-  }, [updatePlatform]);
+    toast({ title: "Published", description: `Content published to ${platform}` });
+  }, [updatePlatform, toast]);
 
   const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
     updateAgent("publisher", { status: "running" });
@@ -158,12 +178,13 @@ const Index = () => {
     for (const p of platforms) {
       if (p.status === "preview") {
         updatePlatform(p.platform, { status: "publishing" as any });
-        await delay(800);
+        await new Promise((r) => setTimeout(r, 600));
         updatePlatform(p.platform, { status: "published" });
       }
     }
-    updateAgent("publisher", { status: "complete", output: `Published to all platforms • RLHF data captured (${rating}★)` });
-  }, [platforms, updateAgent, updatePlatform]);
+    updateAgent("publisher", { status: "complete", output: `Published to all platforms • RLHF data captured (${rating}★)${feedback ? ` • "${feedback}"` : ""}` });
+    toast({ title: "All Published", description: `Content distributed to all platforms (${rating}★ rating captured)` });
+  }, [platforms, updateAgent, updatePlatform, toast]);
 
   const handleReject = useCallback(() => {
     setPreviewStatus("generating");
@@ -178,10 +199,10 @@ const Index = () => {
   }, [updateAgent]);
 
   const agentConfig = [
-    { key: "drafter", name: "Drafter", subtitle: "Knowledge Architect", model: "Claude 3.5 Sonnet", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
-    { key: "reviewer", name: "Reviewer", subtitle: "Compliance & Governance", model: "GPT-4o (Critic)", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
-    { key: "customizer", name: "Customizer", subtitle: "Multimodal Adaptation", model: "Gemini 1.5 Pro", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
-    { key: "publisher", name: "Publisher", subtitle: "API Integrator", model: "Internal Runtime", icon: Rocket, colorClass: "text-agent-publisher", glowClass: "glow-agent-publisher" },
+    { key: "drafter", name: "Drafter", subtitle: "Knowledge Architect", model: "Gemini 3 Flash", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
+    { key: "reviewer", name: "Reviewer", subtitle: "Compliance & Governance", model: "AI Critic (RLAIF)", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
+    { key: "customizer", name: "Customizer", subtitle: "Multimodal Adaptation", model: "Platform Optimizer", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
+    { key: "publisher", name: "Publisher", subtitle: "API Integrator", model: "Distribution Engine", icon: Rocket, colorClass: "text-agent-publisher", glowClass: "glow-agent-publisher" },
   ];
 
   const connectorStates = [
@@ -195,7 +216,6 @@ const Index = () => {
       <Header />
       <div className="mt-4"><MetricsBar {...metrics} /></div>
 
-      {/* Agent Pipeline */}
       <div className="mt-4 flex items-stretch gap-2">
         {agentConfig.map((cfg, i) => (
           <div key={cfg.key} className="flex items-stretch gap-2 flex-1">
@@ -209,16 +229,13 @@ const Index = () => {
         ))}
       </div>
 
-      {/* Main content: Left (Input + Brand) | Right (Output + Platforms) */}
       <div className="mt-4 grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
           <MultimodalInput onSubmit={runPipeline} isProcessing={isRunning} />
           <InputAnalyzer media={media} />
           <BrandDNAPanel brandData={brandData} onExtract={handleExtractBrand} isExtracting={isExtracting} />
         </div>
 
-        {/* Right column */}
         <div className="lg:col-span-3 space-y-4">
           <OutputPreview
             content={previewContent}

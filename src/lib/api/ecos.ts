@@ -40,6 +40,18 @@ export async function getBufferChannels(organizationId: string): Promise<{ succe
   return { success: true, channels: data.channels };
 }
 
+export async function getBufferPosts(
+  organizationId: string,
+  channelIds?: string[]
+): Promise<{ success: boolean; posts?: any[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("publish-buffer", {
+    body: { action: "get-posts", organizationId, channelIds },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, posts: data.posts };
+}
+
 export async function publishViaBuffer(
   contents: { platform: string; content: string }[],
   channelIds: string[]

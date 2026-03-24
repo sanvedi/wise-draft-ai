@@ -17,9 +17,10 @@ interface BufferConnectProps {
   selectedChannelIds: string[];
   onChannelsLoaded: (channels: BufferChannel[]) => void;
   onSelectionChange: (ids: string[]) => void;
+  onOrgIdLoaded?: (orgId: string) => void;
 }
 
-const BufferConnect = ({ channels, selectedChannelIds, onChannelsLoaded, onSelectionChange }: BufferConnectProps) => {
+const BufferConnect = ({ channels, selectedChannelIds, onChannelsLoaded, onSelectionChange, onOrgIdLoaded }: BufferConnectProps) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -137,6 +137,7 @@ async function runDrafter(ctx: PipelineContext): Promise<StepResult> {
     ],
     [contentTool],
     { type: "function", function: { name: "generate_platform_content" } },
+    "drafter",
   );
 
   const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];

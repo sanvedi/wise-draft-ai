@@ -142,25 +142,55 @@ export const ecosApi = {
     platforms: string[],
     brandDNA?: BrandDNA | null,
     mediaDescriptions?: string[]
-  ): Promise<ContentGenerationResult> {
-    const { data, error } = await supabase.functions.invoke("generate-content", {
+  ): Promise<OrchestrationResult> {
+    const { data, error } = await supabase.functions.invoke("orchestrate-pipeline", {
       body: { prompt, platforms, brandDNA, mediaDescriptions },
     });
 
     if (error) {
-      console.error("Content generation error:", error);
-      return { success: false, contents: [], reviewNotes: "", complianceScore: 0, error: error.message };
+      console.error("Orchestration error:", error);
+      return { success: false, contents: [], reviewNotes: "", complianceScore: 0, error: error.message, runId: "" };
     }
 
     if (data?.error) {
-      return { success: false, contents: [], reviewNotes: "", complianceScore: 0, error: data.error };
+      return { success: false, contents: [], reviewNotes: "", complianceScore: 0, error: data.error, runId: data.runId || "" };
     }
 
     return {
       success: true,
+      runId: data.runId || "",
       contents: data.contents || [],
       reviewNotes: data.reviewNotes || "",
       complianceScore: data.complianceScore || 0,
+      platformFeedback: data.platformFeedback,
+      viralScores: data.viralScores,
+      retries: data.retries,
+      stepsCompleted: data.stepsCompleted,
+    };
+  },
+
+  async resumePipeline(runId: string): Promise<OrchestrationResult> {
+    const { data, error } = await supabase.functions.invoke("orchestrate-pipeline", {
+      body: { action: "resume", runId },
+    });
+
+    if (error) {
+      return { success: false, contents: [], reviewNotes: "", complianceScore: 0, error: error.message, runId };
+    }
+    if (data?.error) {
+      return { success: false, contents: [], reviewNotes: "", complianceScore: 0, error: data.error, runId };
+    }
+
+    return {
+      success: true,
+      runId,
+      contents: data.contents || [],
+      reviewNotes: data.reviewNotes || "",
+      complianceScore: data.complianceScore || 0,
+      platformFeedback: data.platformFeedback,
+      viralScores: data.viralScores,
+      retries: data.retries,
+      stepsCompleted: data.stepsCompleted,
     };
   },
 };

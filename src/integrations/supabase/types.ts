@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      pipeline_runs: {
+        Row: {
+          brand_dna: Json | null
+          checkpoints: Json
+          created_at: string
+          current_step: string
+          error_log: Json | null
+          id: string
+          max_retries: number
+          media_descriptions: string[] | null
+          platforms: string[]
+          prompt: string
+          result: Json | null
+          retry_count: number
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brand_dna?: Json | null
+          checkpoints?: Json
+          created_at?: string
+          current_step?: string
+          error_log?: Json | null
+          id?: string
+          max_retries?: number
+          media_descriptions?: string[] | null
+          platforms?: string[]
+          prompt: string
+          result?: Json | null
+          retry_count?: number
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          brand_dna?: Json | null
+          checkpoints?: Json
+          created_at?: string
+          current_step?: string
+          error_log?: Json | null
+          id?: string
+          max_retries?: number
+          media_descriptions?: string[] | null
+          platforms?: string[]
+          prompt?: string
+          result?: Json | null
+          retry_count?: number
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_integrations: {
         Row: {
           connected_at: string | null

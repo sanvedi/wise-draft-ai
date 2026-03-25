@@ -52,11 +52,21 @@ async function updateRun(runId: string, updates: Record<string, any>) {
   await admin.from("pipeline_runs").update({ ...updates, updated_at: new Date().toISOString() }).eq("id", runId);
 }
 
-async function callAI(messages: any[], tools?: any[], toolChoice?: any) {
+// ── Per-agent model assignments (upgraded to latest same-cost-tier models) ──
+const AGENT_MODELS: Record<StepName, string> = {
+  drafter: "google/gemini-3-flash-preview",       // Fast creative generation (upgraded from default)
+  reviewer: "google/gemini-3-flash-preview",       // Brand compliance scoring (upgraded from GPT-5 Mini)
+  customizer: "google/gemini-3.1-pro-preview",     // Deep viral optimization (upgraded from Gemini 2.5 Pro)
+  publisher: "google/gemini-3-flash-preview",      // Lightweight step
+  learner: "google/gemini-3-flash-preview",        // Analytics summarization (upgraded from GPT-5 Mini)
+};
+
+async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: StepName) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-  const body: any = { messages, stream: false };
+  const model = step ? AGENT_MODELS[step] : "google/gemini-3-flash-preview";
+  const body: any = { model, messages, stream: false };
   if (tools) { body.tools = tools; body.tool_choice = toolChoice; }
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -127,6 +137,7 @@ async function runDrafter(ctx: PipelineContext): Promise<StepResult> {
     ],
     [contentTool],
     { type: "function", function: { name: "generate_platform_content" } },
+    "drafter",
   );
 
   const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
@@ -183,6 +194,7 @@ async function runReviewer(ctx: PipelineContext): Promise<StepResult> {
     ],
     [reviewTool],
     { type: "function", function: { name: "review_content" } },
+    "reviewer",
   );
 
   const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
@@ -256,6 +268,7 @@ async function runCustomizer(ctx: PipelineContext): Promise<StepResult> {
     ],
     [customizeTool],
     { type: "function", function: { name: "optimize_content" } },
+    "customizer",
   );
 
   const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];

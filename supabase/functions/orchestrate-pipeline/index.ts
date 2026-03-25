@@ -194,6 +194,7 @@ async function runReviewer(ctx: PipelineContext): Promise<StepResult> {
     ],
     [reviewTool],
     { type: "function", function: { name: "review_content" } },
+    "reviewer",
   );
 
   const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];
@@ -267,6 +268,7 @@ async function runCustomizer(ctx: PipelineContext): Promise<StepResult> {
     ],
     [customizeTool],
     { type: "function", function: { name: "optimize_content" } },
+    "customizer",
   );
 
   const toolCall = aiData.choices?.[0]?.message?.tool_calls?.[0];

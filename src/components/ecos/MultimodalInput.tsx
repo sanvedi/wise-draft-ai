@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, Link2, Image, Video, FileText, X, Plus } from "lucide-react";
+import { Upload, Link2, Image, Video, FileText, X, Plus, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -109,19 +109,13 @@ const MultimodalInput = ({ onSubmit, isProcessing }: MultimodalInputProps) => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-lg border border-border bg-card p-5 space-y-4"
+      className="rounded-xl border border-border bg-card p-4 sm:p-5 space-y-4"
     >
-      <div className="flex items-center gap-2 mb-1">
-        <Upload className="w-4 h-4 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Multimodal Input</h2>
-        <span className="text-[10px] font-mono text-muted-foreground ml-auto">{media.length} asset{media.length !== 1 ? "s" : ""}</span>
-      </div>
-
       <Textarea
-        placeholder="Describe what content you want to create. Be specific about tone, audience, and key messages..."
+        placeholder="Describe the content you want to create — topic, tone, audience, and key messages..."
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        className="min-h-[100px] bg-muted/30 border-border text-sm placeholder:text-muted-foreground resize-none"
+        className="min-h-[120px] bg-muted/30 border-border text-sm placeholder:text-muted-foreground resize-none rounded-lg"
       />
 
       {/* Media thumbnails */}
@@ -136,15 +130,15 @@ const MultimodalInput = ({ onSubmit, isProcessing }: MultimodalInputProps) => {
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   exit={{ scale: 0.8, opacity: 0 }}
-                  className="relative group rounded-md border border-border bg-muted/50 overflow-hidden"
-                  style={{ width: 80, height: 80 }}
+                  className="relative group rounded-lg border border-border bg-muted/50 overflow-hidden"
+                  style={{ width: 72, height: 72 }}
                 >
                   {item.thumbnail ? (
                     <img src={item.thumbnail} alt={item.name} className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-1">
                       <Icon className="w-5 h-5 text-muted-foreground" />
-                      <span className="text-[8px] font-mono text-muted-foreground truncate max-w-[70px] px-1">{item.name}</span>
+                      <span className="text-[10px] font-mono text-muted-foreground truncate max-w-[60px] px-1">{item.name}</span>
                     </div>
                   )}
                   <button
@@ -154,7 +148,7 @@ const MultimodalInput = ({ onSubmit, isProcessing }: MultimodalInputProps) => {
                     <X className="w-3 h-3 text-foreground" />
                   </button>
                   <div className="absolute bottom-0 left-0 right-0 bg-background/80 px-1 py-0.5">
-                    <span className="text-[8px] font-mono text-muted-foreground">
+                    <span className="text-[10px] font-mono text-muted-foreground">
                       {item.type.toUpperCase()} {formatSize(item.size)}
                     </span>
                   </div>
@@ -175,38 +169,45 @@ const MultimodalInput = ({ onSubmit, isProcessing }: MultimodalInputProps) => {
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleUrlAdd()}
-              className="flex-1 bg-muted/30 border border-border rounded-md px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground font-mono"
+              className="flex-1 bg-muted/30 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground font-mono"
             />
-            <Button size="sm" onClick={handleUrlAdd} className="text-[10px] font-mono bg-primary text-primary-foreground">Add</Button>
+            <Button size="sm" onClick={handleUrlAdd} className="text-xs bg-primary text-primary-foreground rounded-lg">Add</Button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Action buttons */}
-      <div className="flex gap-2">
-        <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.md,.txt" onChange={handleFileSelect} className="hidden" />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          className="text-[10px] font-mono uppercase tracking-wider border-border text-muted-foreground hover:text-foreground"
-        >
-          <Plus className="w-3 h-3 mr-1" /> Upload
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setShowUrlInput(!showUrlInput)}
-          className="text-[10px] font-mono uppercase tracking-wider border-border text-muted-foreground hover:text-foreground"
-        >
-          <Link2 className="w-3 h-3 mr-1" /> URL
-        </Button>
+      {/* Action row */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex gap-2">
+          <input ref={fileInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.md,.txt" onChange={handleFileSelect} className="hidden" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs border-border text-muted-foreground hover:text-foreground rounded-lg"
+          >
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Upload
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowUrlInput(!showUrlInput)}
+            className="text-xs border-border text-muted-foreground hover:text-foreground rounded-lg"
+          >
+            <Link2 className="w-3.5 h-3.5 mr-1.5" /> URL
+          </Button>
+          {media.length > 0 && (
+            <span className="text-xs text-muted-foreground self-center ml-1">{media.length} file{media.length !== 1 ? "s" : ""}</span>
+          )}
+        </div>
+
         <Button
           onClick={() => onSubmit(prompt, media)}
           disabled={!prompt.trim() || isProcessing}
-          className="ml-auto bg-primary text-primary-foreground hover:bg-primary/90 font-mono text-[10px] uppercase tracking-wider"
+          className="sm:ml-auto bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-semibold px-6 py-5 rounded-lg"
         >
-          {isProcessing ? "Processing..." : "Generate Content"}
+          <Sparkles className="w-4 h-4 mr-2" />
+          {isProcessing ? "Generating..." : "Generate Content"}
         </Button>
       </div>
     </motion.div>

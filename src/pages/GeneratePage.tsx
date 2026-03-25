@@ -14,10 +14,10 @@ import { Button } from "@/components/ui/button";
 
 const agentConfig = [
   { key: "drafter", name: "Drafter", subtitle: "Content Architect", model: "Gemini 3 Flash", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
-  { key: "reviewer", name: "Reviewer", subtitle: "Brand Compliance", model: "GPT-5 Mini (RLAIF)", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
-  { key: "customizer", name: "Customizer", subtitle: "Viral Optimizer", model: "Gemini 2.5 Pro", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
+  { key: "reviewer", name: "Reviewer", subtitle: "Brand Compliance", model: "Gemini 3 Flash", icon: ShieldCheck, colorClass: "text-agent-reviewer", glowClass: "glow-agent-reviewer" },
+  { key: "customizer", name: "Customizer", subtitle: "Viral Optimizer", model: "Gemini 3.1 Pro", icon: Palette, colorClass: "text-agent-customizer", glowClass: "glow-agent-customizer" },
   { key: "publisher", name: "Publisher", subtitle: "Distribution", model: "Buffer API", icon: Rocket, colorClass: "text-agent-publisher", glowClass: "glow-agent-publisher" },
-  { key: "learner", name: "Learner", subtitle: "Analytics AI", model: "GPT-5 Mini", icon: Brain, colorClass: "text-agent-learner", glowClass: "glow-agent-learner" },
+  { key: "learner", name: "Learner", subtitle: "Analytics AI", model: "Gemini 3 Flash", icon: Brain, colorClass: "text-agent-learner", glowClass: "glow-agent-learner" },
 ];
 
 const stepToAgentMap: Record<string, string[]> = {

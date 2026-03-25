@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 
 const agents = [
   { name: "Drafter", role: "Content Architect", model: "Gemini 3 Flash", step: "01", desc: "Generates initial content drafts tailored to each platform's format and audience expectations." },
-  { name: "Reviewer", role: "Brand Compliance", model: "GPT-5 Mini", step: "02", desc: "Validates every draft against your brand DNA — tone, terminology, visual identity, and guidelines." },
-  { name: "Customizer", role: "Viral Optimizer", model: "Gemini 2.5 Pro", step: "03", desc: "Rewrites content for maximum engagement using platform-specific hooks, hashtags, and formatting." },
+  { name: "Reviewer", role: "Brand Compliance", model: "Gemini 3 Flash", step: "02", desc: "Validates every draft against your brand DNA — tone, terminology, visual identity, and guidelines." },
+  { name: "Customizer", role: "Viral Optimizer", model: "Gemini 3.1 Pro", step: "03", desc: "Rewrites content for maximum engagement using platform-specific hooks, hashtags, and formatting." },
   { name: "Publisher", role: "Distribution", model: "Buffer API", step: "04", desc: "Pushes approved content to your connected channels with proper scheduling and targeting." },
-  { name: "Learner", role: "Analytics AI", model: "GPT-5 Mini", step: "05", desc: "Studies post performance over time and feeds insights back to improve future content quality." },
+  { name: "Learner", role: "Analytics AI", model: "Gemini 3 Flash", step: "05", desc: "Studies post performance over time and feeds insights back to improve future content quality." },
 ];
 
 const HomePage = () => {

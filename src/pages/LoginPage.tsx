@@ -4,9 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LoginPage = () => {
+  const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -24,9 +28,14 @@ const LoginPage = () => {
 
     if (error) {
       setError(error.message);
+    } else {
+      navigate("/", { replace: true });
     }
     setLoading(false);
   };
+
+  if (authLoading) return null;
+  if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-background bg-grid flex items-center justify-center">

@@ -60,9 +60,10 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = claimsData.claims.sub as string;
+    const userEmail = (claimsData.claims.email as string || "").toLowerCase();
 
-    const BUFFER_ACCESS_TOKEN = Deno.env.get("BUFFER_ACCESS_TOKEN");
+    const ADMIN_EMAIL = "sanvedi@gmail.com";
 
     let body;
     try {

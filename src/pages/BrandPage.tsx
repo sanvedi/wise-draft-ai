@@ -70,7 +70,7 @@ const BrandPage = () => {
           <div className="flex items-center gap-2">
             <Globe className="w-5 h-5 text-primary" />
             <h2 className="text-sm font-display font-semibold text-foreground">Website Crawl</h2>
-            <span className="text-[9px] font-mono text-primary/60 bg-primary/5 rounded-full px-2 py-0.5 ml-auto">Firecrawl</span>
+            <span className="text-xs font-mono text-primary/60 bg-primary/5 rounded-full px-2.5 py-0.5 ml-auto">Firecrawl</span>
           </div>
           <p className="text-xs text-muted-foreground">Enter your website URL. We'll deep-crawl it to extract brand colors, tone, typography, and guidelines.</p>
           <div className="flex gap-2">

@@ -1,23 +1,31 @@
 import { motion } from "framer-motion";
 import { Sparkles, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { lovable } from "@/integrations/lovable/index";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const LoginPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleGoogleLogin = async () => {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setLoading(true);
     setError(null);
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
     });
+
     if (error) {
-      setError(error.message || "Sign in failed");
-      setLoading(false);
+      setError(error.message);
     }
+    setLoading(false);
   };
 
   return (
@@ -40,24 +48,50 @@ const LoginPage = () => {
           </p>
         </div>
 
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">
-            Sign in to access your content pipeline and brand assets.
-          </p>
+        <form onSubmit={handleLogin} className="space-y-4 text-left">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+              Email
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+              className="bg-background/50 border-border"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              required
+              className="bg-background/50 border-border"
+            />
+          </div>
 
           <Button
-            onClick={handleGoogleLogin}
+            type="submit"
             disabled={loading}
             className="w-full bg-foreground text-background hover:bg-foreground/90 font-medium py-5"
           >
             <LogIn className="w-4 h-4 mr-2" />
-            {loading ? "Redirecting..." : "Continue with Google"}
+            {loading ? "Signing in..." : "Sign In"}
           </Button>
 
           {error && (
-            <p className="text-xs text-destructive font-mono">{error}</p>
+            <p className="text-xs text-destructive font-mono text-center">{error}</p>
           )}
-        </div>
+        </form>
 
         <p className="text-[9px] font-mono text-muted-foreground">
           Your data is encrypted and stored securely.

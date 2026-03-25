@@ -60,9 +60,10 @@ serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = claimsData.claims.sub as string;
+    const userEmail = (claimsData.claims.email as string || "").toLowerCase();
 
-    const BUFFER_ACCESS_TOKEN = Deno.env.get("BUFFER_ACCESS_TOKEN");
+    const ADMIN_EMAIL = "sanvedi@gmail.com";
 
     let body;
     try {
@@ -76,8 +77,8 @@ serve(async (req) => {
 
     const { action } = body;
 
-    // Try to get user's stored key first, fall back to env secret
-    let accessToken = BUFFER_ACCESS_TOKEN;
+    // Resolve access token: user's own key first, then env secret only for admin email
+    let accessToken: string | undefined;
     try {
       const { data: integration } = await supabaseAuth
         .from("user_integrations")
@@ -90,10 +91,16 @@ serve(async (req) => {
         accessToken = integration.encrypted_api_key;
       }
     } catch {
-      // Fall back to env secret
+      // No user-specific key found
     }
+
+    // Only fall back to the server-level secret for the admin account
+    if (!accessToken && userEmail === ADMIN_EMAIL) {
+      accessToken = Deno.env.get("BUFFER_ACCESS_TOKEN");
+    }
+
     if (!accessToken) {
-      throw new Error("No Buffer access token available. Set it in Integrations or configure the BUFFER_ACCESS_TOKEN secret.");
+      throw new Error("No Buffer access token configured. Please add your Buffer API key in the Integrations page.");
     }
     // Action: get-organizations
     if (action === "get-organizations") {

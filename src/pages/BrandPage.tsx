@@ -57,9 +57,8 @@ const BrandPage = () => {
   const formatSize = (b: number) => b < 1048576 ? `${(b / 1024).toFixed(1)}KB` : `${(b / 1048576).toFixed(1)}MB`;
 
   return (
-    <div className="px-6 py-8 max-w-5xl mx-auto space-y-8">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-5xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground">Brand Assets</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Set up your brand DNA. This becomes the foundation the Reviewer agent uses for compliance checks.
         </p>

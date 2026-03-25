@@ -15,7 +15,7 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="px-6 py-12 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 py-8 sm:py-12 max-w-5xl mx-auto">
       {/* Hero — left-aligned, editorial feel */}
       <motion.section
         initial={{ opacity: 0, y: 16 }}

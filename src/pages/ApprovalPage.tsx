@@ -6,10 +6,14 @@ import { usePipelineStore } from "@/lib/store/pipelineStore";
 import OutputPreview from "@/components/ecos/OutputPreview";
 import PlatformCard from "@/components/ecos/PlatformCard";
 import BufferConnect from "@/components/ecos/BufferConnect";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const ApprovalPage = () => {
   const { toast } = useToast();
   const store = usePipelineStore();
+  const navigate = useNavigate();
 
   const handlePublish = useCallback(async (platform: string) => {
     const pd = store.platforms.find((p) => p.platform === platform);
@@ -65,22 +69,20 @@ const ApprovalPage = () => {
   const hasContent = store.platforms.some((p) => p.content);
 
   return (
-    <div className="px-6 py-8 max-w-6xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground">Content Approval</h1>
-        <p className="text-sm text-muted-foreground mt-1">Review, rate, and approve content before publishing. Nothing goes live without your say.</p>
-      </motion.div>
-
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-6xl mx-auto space-y-6">
       {!hasContent && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-12 text-center space-y-3">
-          <p className="text-muted-foreground text-sm">No content to review yet. Generate content first.</p>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-border bg-card p-8 sm:p-12 text-center space-y-4">
+          <p className="text-muted-foreground">No content to review yet.</p>
+          <Button onClick={() => navigate("/generate")} variant="outline" className="gap-2">
+            <ArrowLeft className="w-4 h-4" /> Go to Generate
+          </Button>
         </motion.div>
       )}
 
       {hasContent && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Preview + Approval */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-5">
             <OutputPreview
               content={store.previewContent}
               platform="all-platforms"
@@ -91,9 +93,9 @@ const ApprovalPage = () => {
           </div>
 
           {/* Platform Cards */}
-          <div className="lg:col-span-5 space-y-3">
+          <div className="lg:col-span-4 space-y-3">
             <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               {store.platforms.map((p, i) => (
                 <PlatformCard
                   key={p.platform}

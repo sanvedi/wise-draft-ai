@@ -1,14 +1,16 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import { BookOpen, ShieldCheck, Palette, Rocket, Brain, AlertTriangle } from "lucide-react";
+import { BookOpen, ShieldCheck, Palette, Rocket, Brain, AlertTriangle, RotateCcw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { ecosApi } from "@/lib/api/ecos";
+import { supabase } from "@/integrations/supabase/client";
 import { useBrandStore } from "@/lib/store/brandStore";
 import { usePipelineStore, defaultPlatforms, initialAgents } from "@/lib/store/pipelineStore";
 import AgentCard from "@/components/ecos/AgentCard";
 import PipelineConnector from "@/components/ecos/PipelineConnector";
 import MultimodalInput, { MediaItem } from "@/components/ecos/MultimodalInput";
+import { Button } from "@/components/ui/button";
 
 const agentConfig = [
   { key: "drafter", name: "Drafter", subtitle: "Content Architect", model: "Gemini 3 Flash", icon: BookOpen, colorClass: "text-agent-drafter", glowClass: "glow-agent-drafter" },
@@ -18,11 +20,58 @@ const agentConfig = [
   { key: "learner", name: "Learner", subtitle: "Analytics AI", model: "GPT-5 Mini", icon: Brain, colorClass: "text-agent-learner", glowClass: "glow-agent-learner" },
 ];
 
+const stepToAgentMap: Record<string, string[]> = {
+  drafter: ["drafter"],
+  reviewer: ["reviewer"],
+  customizer: ["customizer"],
+  publisher: ["publisher"],
+  learner: ["learner"],
+};
+
+const stepOrder = ["drafter", "reviewer", "customizer", "publisher", "learner"];
+
 const GeneratePage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { fullBrandDNA } = useBrandStore();
   const store = usePipelineStore();
+  const currentRunId = useRef<string | null>(null);
+
+  // Real-time subscription to pipeline_runs for live agent status
+  useEffect(() => {
+    const channel = supabase
+      .channel("pipeline-status")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "pipeline_runs" },
+        (payload) => {
+          const run = payload.new as any;
+          if (run.id !== currentRunId.current) return;
+
+          const currentStep = run.current_step;
+          const currentIdx = stepOrder.indexOf(currentStep);
+
+          // Update agent statuses based on checkpoints and current step
+          for (let i = 0; i < stepOrder.length; i++) {
+            const step = stepOrder[i];
+            if (run.checkpoints?.[step]) {
+              store.updateAgent(step, { status: "complete", output: summarizeCheckpoint(step, run.checkpoints[step]) });
+            } else if (i === currentIdx && run.status === "running") {
+              store.updateAgent(step, { status: "running" });
+            } else if (i > currentIdx && run.status === "running") {
+              store.updateAgent(step, { status: "idle" });
+            }
+          }
+
+          if (run.status === "paused") {
+            store.updateAgent(currentStep, { status: "failed", output: "Paused — retry available" });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [store]);
 
   const runPipeline = useCallback(async (prompt: string, uploadedMedia: MediaItem[]) => {
     store.setIsRunning(true);
@@ -40,10 +89,13 @@ const GeneratePage = () => {
       return desc;
     });
 
+    store.updateAgent("drafter", { status: "running" });
+
     try {
-      store.updateAgent("drafter", { status: "running" });
       const platformNames = defaultPlatforms.map((p) => p.platform);
       const result = await ecosApi.generateContent(prompt, platformNames, fullBrandDNA, mediaDescriptions);
+
+      currentRunId.current = result.runId;
 
       if (!result.success) {
         store.updateAgent("drafter", { status: "failed", output: result.error || "Generation failed" });
@@ -53,46 +105,44 @@ const GeneratePage = () => {
         return;
       }
 
-      store.updateAgent("drafter", { status: "complete", output: `Drafted content for ${result.contents.length} platforms` });
-      store.updateAgent("reviewer", { status: "running" });
-      await new Promise((r) => setTimeout(r, 800));
-
-      const score = result.complianceScore;
-      if (score < 3) {
-        store.updateAgent("reviewer", { status: "failed", output: `Brand compliance low (${score}/5)`, score });
-        store.updateAgent("drafter", { status: "running", output: "Re-drafting..." });
-        const retry = await ecosApi.generateContent(
-          `${prompt}\n\nIMPORTANT: Strictly follow brand guidelines. Previous: ${score}/5. ${result.reviewNotes}`,
-          platformNames, fullBrandDNA, mediaDescriptions
-        );
-        if (retry.success) Object.assign(result, retry);
-        store.updateAgent("drafter", { status: "complete", output: "Revised draft" });
-        store.updateAgent("reviewer", { status: "running" });
-        await new Promise((r) => setTimeout(r, 500));
+      // Update all agents based on completed steps
+      const completed = result.stepsCompleted || [];
+      for (const step of completed) {
+        store.updateAgent(step, { status: "complete", output: getStepSummary(step, result) });
       }
 
-      store.updateAgent("reviewer", { status: "complete", output: result.reviewNotes || "All checks passed", score: Math.max(score, 4) });
-      store.updateAgent("customizer", { status: "running" });
-      for (const p of defaultPlatforms) store.updatePlatform(p.platform, { status: "generating" as any });
-      await new Promise((r) => setTimeout(r, 600));
+      // Update reviewer score
+      if (result.complianceScore) {
+        store.updateAgent("reviewer", {
+          status: "complete",
+          output: result.reviewNotes || "All checks passed",
+          score: result.complianceScore,
+        });
+      }
 
-      for (const item of result.contents) store.updatePlatform(item.platform, { status: "preview", content: item.content });
-      store.updateAgent("customizer", { status: "complete", output: `${result.contents.length} viral-optimized variants ready` });
+      // Update platform content
+      for (const item of result.contents) {
+        store.updatePlatform(item.platform, { status: "preview", content: item.content });
+      }
 
       store.setPreviewContent(result.contents[0]?.content || null);
       store.setPreviewStatus("review");
-      store.updateAgent("publisher", { status: "waiting" });
-      store.updateAgent("learner", { status: "waiting" });
 
       const elapsed = (Date.now() - startTime) / 1000;
       store.setMetrics({
         tokenEfficiency: Math.round(75 + Math.random() * 20),
-        alignmentDrift: Math.round(score * 20),
-        cycleReduction: 92,
+        alignmentDrift: Math.round((result.complianceScore || 3) * 20),
+        cycleReduction: result.retries ? Math.max(70, 100 - result.retries * 10) : 92,
         processingTime: Math.round(elapsed * 10) / 10,
       });
 
-      // Auto-navigate to approval
+      if (result.retries && result.retries > 0) {
+        toast({
+          title: "Pipeline completed with retries",
+          description: `Content was re-drafted ${result.retries} time(s) for better brand compliance.`,
+        });
+      }
+
       navigate("/approval");
     } catch (e) {
       console.error("Pipeline error:", e);
@@ -102,6 +152,32 @@ const GeneratePage = () => {
       store.setIsRunning(false);
     }
   }, [fullBrandDNA, store, toast, navigate]);
+
+  const handleResume = useCallback(async () => {
+    if (!currentRunId.current) return;
+    store.setIsRunning(true);
+    toast({ title: "Resuming pipeline...", description: "Picking up from last checkpoint." });
+
+    try {
+      const result = await ecosApi.resumePipeline(currentRunId.current);
+      if (!result.success) {
+        toast({ title: "Resume failed", description: result.error, variant: "destructive" });
+      } else {
+        for (const item of result.contents) {
+          store.updatePlatform(item.platform, { status: "preview", content: item.content });
+        }
+        store.setPreviewContent(result.contents[0]?.content || null);
+        store.setPreviewStatus("review");
+        navigate("/approval");
+      }
+    } catch (e) {
+      toast({ title: "Resume failed", description: "Could not resume pipeline", variant: "destructive" });
+    } finally {
+      store.setIsRunning(false);
+    }
+  }, [store, toast, navigate]);
+
+  const hasPausedRun = Object.values(store.agents).some((a) => a.status === "failed");
 
   const connectorStates = [
     { active: store.agents.drafter.status === "running" || store.agents.reviewer.status === "running", isCycle: true, label: "RLAIF" },
@@ -127,6 +203,16 @@ const GeneratePage = () => {
         ))}
       </div>
 
+      {/* Resume button for paused runs */}
+      {hasPausedRun && currentRunId.current && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-4 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Pipeline paused. You can resume from the last checkpoint.</p>
+          <Button onClick={handleResume} disabled={store.isRunning} variant="outline" size="sm" className="gap-2">
+            <RotateCcw className="w-3.5 h-3.5" /> Resume
+          </Button>
+        </motion.div>
+      )}
+
       {/* Input */}
       <div className="max-w-3xl">
         <MultimodalInput onSubmit={runPipeline} isProcessing={store.isRunning} />
@@ -144,5 +230,27 @@ const GeneratePage = () => {
     </div>
   );
 };
+
+function summarizeCheckpoint(step: string, data: any): string {
+  switch (step) {
+    case "drafter": return `Drafted ${data?.contents?.length || 0} platform variants`;
+    case "reviewer": return data?.reviewNotes || "Review complete";
+    case "customizer": return `${data?.contents?.length || 0} viral-optimized variants`;
+    case "publisher": return data?.message || "Ready for approval";
+    case "learner": return data?.message || "Monitoring";
+    default: return "Complete";
+  }
+}
+
+function getStepSummary(step: string, result: any): string {
+  switch (step) {
+    case "drafter": return `Drafted ${result.contents?.length || 0} platform variants`;
+    case "reviewer": return result.reviewNotes || "All checks passed";
+    case "customizer": return `${result.contents?.length || 0} viral-optimized variants ready`;
+    case "publisher": return "Content ready for publishing";
+    case "learner": return "Monitoring for analytics";
+    default: return "Complete";
+  }
+}
 
 export default GeneratePage;

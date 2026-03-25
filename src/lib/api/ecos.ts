@@ -6,6 +6,8 @@ interface GeneratedContent {
   content: string;
   hashtags?: string[];
   suggestedMediaPlacement?: string;
+  viralScore?: number;
+  optimizations?: string;
 }
 
 interface ContentGenerationResult {
@@ -14,6 +16,15 @@ interface ContentGenerationResult {
   reviewNotes: string;
   complianceScore: number;
   error?: string;
+  runId?: string;
+  platformFeedback?: any[];
+  viralScores?: { platform: string; score: number }[];
+  retries?: number;
+  stepsCompleted?: string[];
+}
+
+interface OrchestrationResult extends ContentGenerationResult {
+  runId: string;
 }
 
 interface BrandDNAResult {

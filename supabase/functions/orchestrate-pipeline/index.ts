@@ -54,11 +54,16 @@ async function updateRun(runId: string, updates: Record<string, any>) {
 
 // ── Per-agent model assignments (upgraded to latest same-cost-tier models) ──
 const AGENT_MODELS: Record<StepName, string> = {
-  drafter: "google/gemini-3-flash-preview",       // Fast creative generation (upgraded from default)
-  reviewer: "google/gemini-3-flash-preview",       // Brand compliance scoring (upgraded from GPT-5 Mini)
-  customizer: "google/gemini-3.1-pro-preview",     // Deep viral optimization (upgraded from Gemini 2.5 Pro)
+  drafter: "google/gemini-3-flash-preview",       // Fast creative generation
+  reviewer: "openai/gpt-5-mini",                   // Deep brand compliance with reasoning
+  customizer: "google/gemini-3.1-pro-preview",     // Deep viral optimization
   publisher: "google/gemini-3-flash-preview",      // Lightweight step
-  learner: "google/gemini-3-flash-preview",        // Analytics summarization (upgraded from GPT-5 Mini)
+  learner: "google/gemini-3-flash-preview",        // Analytics summarization
+};
+
+// Agents that use extended reasoning mode
+const AGENT_REASONING: Partial<Record<StepName, { effort: string }>> = {
+  reviewer: { effort: "medium" },
 };
 
 async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: StepName) {
@@ -68,6 +73,7 @@ async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: S
   const model = step ? AGENT_MODELS[step] : "google/gemini-3-flash-preview";
   const body: any = { model, messages, stream: false };
   if (tools) { body.tools = tools; body.tool_choice = toolChoice; }
+  if (step && AGENT_REASONING[step]) { body.reasoning = AGENT_REASONING[step]; }
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",

@@ -51,7 +51,6 @@ const GeneratePage = () => {
           const currentStep = run.current_step;
           const currentIdx = stepOrder.indexOf(currentStep);
 
-          // Update agent statuses based on checkpoints and current step
           for (let i = 0; i < stepOrder.length; i++) {
             const step = stepOrder[i];
             if (run.checkpoints?.[step]) {
@@ -105,13 +104,11 @@ const GeneratePage = () => {
         return;
       }
 
-      // Update all agents based on completed steps
       const completed = result.stepsCompleted || [];
       for (const step of completed) {
         store.updateAgent(step, { status: "complete", output: getStepSummary(step, result) });
       }
 
-      // Update reviewer score
       if (result.complianceScore) {
         store.updateAgent("reviewer", {
           status: "complete",
@@ -120,7 +117,6 @@ const GeneratePage = () => {
         });
       }
 
-      // Update platform content
       for (const item of result.contents) {
         store.updatePlatform(item.platform, { status: "preview", content: item.content });
       }
@@ -180,25 +176,34 @@ const GeneratePage = () => {
   const hasPausedRun = Object.values(store.agents).some((a) => a.status === "failed");
 
   const connectorStates = [
-    { active: store.agents.drafter.status === "running" || store.agents.reviewer.status === "running", isCycle: true, label: "RLAIF" },
+    { active: store.agents.drafter.status === "running" || store.agents.reviewer.status === "running", isCycle: true, label: "Review" },
     { active: store.agents.customizer.status === "running" || store.agents.customizer.status === "complete" },
-    { active: store.agents.publisher.status === "running" || store.agents.publisher.status === "complete", label: "HITL" },
+    { active: store.agents.publisher.status === "running" || store.agents.publisher.status === "complete", label: "Approve" },
     { active: store.agents.learner.status === "running" || store.agents.learner.status === "complete" },
   ];
 
   return (
-    <div className="px-6 py-8 max-w-6xl mx-auto space-y-6">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground">Generate Content</h1>
-        <p className="text-sm text-muted-foreground mt-1">Enter your prompt and let the agents create viral-worthy content.</p>
-      </motion.div>
-
-      {/* Agent pipeline */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-4xl mx-auto space-y-6">
+      {/* Agent pipeline — vertical on mobile, horizontal on desktop */}
+      <div className="hidden md:flex items-center gap-1 overflow-x-auto pb-2">
         {agentConfig.map((cfg, i) => (
-          <div key={cfg.key} className="flex items-center gap-1.5 flex-shrink-0">
+          <div key={cfg.key} className="flex items-center gap-1 flex-shrink-0">
             <AgentCard {...cfg} status={store.agents[cfg.key].status} output={store.agents[cfg.key].output} score={store.agents[cfg.key].score} index={i} />
             {i < connectorStates.length && <PipelineConnector {...connectorStates[i]} />}
+          </div>
+        ))}
+      </div>
+
+      {/* Vertical pipeline on mobile */}
+      <div className="md:hidden space-y-1">
+        {agentConfig.map((cfg, i) => (
+          <div key={cfg.key}>
+            <AgentCard {...cfg} status={store.agents[cfg.key].status} output={store.agents[cfg.key].output} score={store.agents[cfg.key].score} index={i} />
+            {i < connectorStates.length && (
+              <div className="flex justify-center">
+                <PipelineConnector {...connectorStates[i]} vertical />
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -214,12 +219,10 @@ const GeneratePage = () => {
       )}
 
       {/* Input */}
-      <div className="max-w-3xl">
-        <MultimodalInput onSubmit={runPipeline} isProcessing={store.isRunning} />
-      </div>
+      <MultimodalInput onSubmit={runPipeline} isProcessing={store.isRunning} />
 
       {!fullBrandDNA && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="glass rounded-xl p-4 border-agent-reviewer/30">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl border border-agent-reviewer/30 bg-agent-reviewer/5 p-4">
           <p className="text-sm text-agent-reviewer flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 flex-shrink-0" />
             No Brand DNA loaded. Content will be generated without brand compliance checks.{" "}

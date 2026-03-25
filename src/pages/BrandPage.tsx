@@ -57,9 +57,8 @@ const BrandPage = () => {
   const formatSize = (b: number) => b < 1048576 ? `${(b / 1024).toFixed(1)}KB` : `${(b / 1048576).toFixed(1)}MB`;
 
   return (
-    <div className="px-6 py-8 max-w-5xl mx-auto space-y-8">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-5xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground">Brand Assets</h1>
         <p className="text-sm text-muted-foreground mt-1">
           Set up your brand DNA. This becomes the foundation the Reviewer agent uses for compliance checks.
         </p>
@@ -71,7 +70,7 @@ const BrandPage = () => {
           <div className="flex items-center gap-2">
             <Globe className="w-5 h-5 text-primary" />
             <h2 className="text-sm font-display font-semibold text-foreground">Website Crawl</h2>
-            <span className="text-[9px] font-mono text-primary/60 bg-primary/5 rounded-full px-2 py-0.5 ml-auto">Firecrawl</span>
+            <span className="text-xs font-mono text-primary/60 bg-primary/5 rounded-full px-2.5 py-0.5 ml-auto">Firecrawl</span>
           </div>
           <p className="text-xs text-muted-foreground">Enter your website URL. We'll deep-crawl it to extract brand colors, tone, typography, and guidelines.</p>
           <div className="flex gap-2">
@@ -136,7 +135,7 @@ const BrandPage = () => {
           <div className="flex items-center gap-2">
             <Palette className="w-5 h-5 text-agent-customizer" />
             <h2 className="text-lg font-display font-semibold text-foreground">Extracted Brand DNA</h2>
-            <span className="text-[9px] font-mono text-primary bg-primary/10 rounded-full px-2 py-0.5 ml-auto">Active</span>
+            <span className="text-xs font-mono text-primary bg-primary/10 rounded-full px-2.5 py-0.5 ml-auto">Active</span>
           </div>
 
           {brandData.organizationName && (
@@ -157,12 +156,12 @@ const BrandPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {/* Colors */}
             <div className="space-y-2">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Colors</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Colors</span>
               <div className="flex gap-2 flex-wrap">
                 {brandData.colors.map((c) => (
                   <div key={c.hex} className="flex flex-col items-center gap-1">
                     <div className="w-10 h-10 rounded-lg border border-border" style={{ backgroundColor: c.hex }} />
-                    <span className="text-[9px] font-mono text-muted-foreground">{c.name}</span>
+                    <span className="text-xs font-mono text-muted-foreground">{c.name}</span>
                   </div>
                 ))}
               </div>
@@ -170,7 +169,7 @@ const BrandPage = () => {
 
             {/* Typography */}
             <div className="space-y-2">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Typography</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Typography</span>
               <div className="flex gap-2 flex-wrap">
                 {brandData.fonts.map((f) => (
                   <span key={f} className="text-xs font-mono px-3 py-1 glass rounded-lg text-foreground flex items-center gap-1.5">
@@ -182,7 +181,7 @@ const BrandPage = () => {
 
             {/* Tone */}
             <div className="space-y-2">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Brand Tone</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Brand Tone</span>
               <p className="text-sm text-foreground">{brandData.tone}</p>
             </div>
           </div>
@@ -190,7 +189,7 @@ const BrandPage = () => {
           {/* Key Offerings */}
           {brandData.keyOfferings && brandData.keyOfferings.length > 0 && (
             <div className="space-y-2">
-              <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Key Offerings</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Key Offerings</span>
               <div className="flex gap-2 flex-wrap">
                 {brandData.keyOfferings.map((o, i) => (
                   <span key={i} className="text-xs font-mono px-3 py-1 rounded-lg bg-primary/10 text-primary">{o}</span>
@@ -201,7 +200,7 @@ const BrandPage = () => {
 
           {/* Guidelines */}
           <div className="space-y-2">
-            <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Content Guidelines</span>
+            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Content Guidelines</span>
             <ul className="space-y-1">
               {brandData.guidelines.map((g, i) => (
                 <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">

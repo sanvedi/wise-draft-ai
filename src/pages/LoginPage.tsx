@@ -102,7 +102,7 @@ const LoginPage = () => {
           )}
         </form>
 
-        <p className="text-[9px] font-mono text-muted-foreground">
+        <p className="text-xs font-mono text-muted-foreground">
           Your data is encrypted and stored securely.
         </p>
       </motion.div>

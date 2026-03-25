@@ -39,7 +39,7 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className="rounded-lg border border-border bg-card p-4 flex flex-col"
+      className="rounded-xl border border-border bg-card p-3 sm:p-4 flex flex-col"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
@@ -49,26 +49,19 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
         <div className="flex items-center gap-1.5">
           {data.status === "generating" && <Loader2 className="w-3 h-3 text-agent-drafter animate-spin" />}
           {data.status === "published" && <CheckCircle2 className="w-3 h-3 text-primary" />}
-          <span className={`text-[9px] font-mono uppercase tracking-wider ${color}`}>{label}</span>
+          <span className={`text-xs font-mono ${color}`}>{label}</span>
         </div>
       </div>
 
-      <div className="text-[9px] font-mono text-muted-foreground mb-2 flex flex-wrap gap-1">
-        {data.mediaSupport.map((m) => (
-          <span key={m} className="px-1.5 py-0.5 rounded bg-muted">{m}</span>
-        ))}
-        {data.characterLimit && <span className="px-1.5 py-0.5 rounded bg-muted">{data.characterLimit} chars</span>}
-      </div>
-
       {data.content && (
-        <div className="flex-1 rounded-md bg-muted/30 border border-border p-2 mb-3 max-h-28 overflow-y-auto">
-          <p className="text-[11px] text-foreground leading-relaxed whitespace-pre-wrap">{data.content}</p>
+        <div className="flex-1 rounded-lg bg-muted/30 border border-border p-2.5 mb-3 max-h-28 overflow-y-auto">
+          <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{data.content}</p>
         </div>
       )}
 
       {!data.content && data.status === "idle" && (
-        <div className="flex-1 flex items-center justify-center rounded-md bg-muted/20 border border-dashed border-border p-4 mb-3">
-          <span className="text-[10px] font-mono text-muted-foreground">Content will appear here</span>
+        <div className="flex-1 flex items-center justify-center rounded-lg bg-muted/20 border border-dashed border-border p-4 mb-3">
+          <span className="text-xs text-muted-foreground">Content will appear here</span>
         </div>
       )}
 
@@ -79,22 +72,22 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
               size="sm"
               variant="outline"
               onClick={() => onPreview(data.platform)}
-              className="flex-1 text-[9px] font-mono uppercase border-border text-muted-foreground"
+              className="flex-1 text-xs border-border text-muted-foreground rounded-lg"
             >
-              <Eye className="w-3 h-3 mr-1" /> Preview
+              <Eye className="w-3.5 h-3.5 mr-1.5" /> Preview
             </Button>
             <Button
               size="sm"
               onClick={() => onPublish(data.platform)}
-              className="flex-1 text-[9px] font-mono uppercase bg-primary text-primary-foreground"
+              className="flex-1 text-xs bg-primary text-primary-foreground rounded-lg"
             >
-              <Send className="w-3 h-3 mr-1" /> Publish
+              <Send className="w-3.5 h-3.5 mr-1.5" /> Publish
             </Button>
           </>
         )}
         {data.status === "published" && (
-          <div className="w-full text-center py-1">
-            <span className="text-[10px] font-mono text-primary flex items-center justify-center gap-1"><Check className="w-3 h-3" /> Live</span>
+          <div className="w-full text-center py-1.5">
+            <span className="text-xs text-primary flex items-center justify-center gap-1.5"><Check className="w-3.5 h-3.5" /> Live</span>
           </div>
         )}
       </div>

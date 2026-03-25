@@ -15,7 +15,7 @@ const HomePage = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="px-6 py-12 max-w-5xl mx-auto">
+    <div className="px-4 sm:px-6 py-8 sm:py-12 max-w-5xl mx-auto">
       {/* Hero — left-aligned, editorial feel */}
       <motion.section
         initial={{ opacity: 0, y: 16 }}
@@ -81,7 +81,7 @@ const HomePage = () => {
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{agent.desc}</p>
               </div>
-              <span className="text-[10px] font-mono text-muted-foreground bg-muted/60 rounded px-2 py-0.5 flex-shrink-0 mt-0.5">
+              <span className="text-xs font-mono text-muted-foreground bg-muted/60 rounded px-2 py-0.5 flex-shrink-0 mt-0.5">
                 {agent.model}
               </span>
             </motion.div>

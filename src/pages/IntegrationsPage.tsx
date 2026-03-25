@@ -140,9 +140,8 @@ const IntegrationsPage = () => {
   );
 
   return (
-    <div className="px-6 py-8 max-w-5xl mx-auto space-y-8">
+    <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-5xl mx-auto space-y-8">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-3xl font-display font-bold text-foreground">Integrations</h1>
         <p className="text-sm text-muted-foreground mt-1">
           API keys are encrypted and stored server-side. They are never exposed to the browser.
         </p>
@@ -163,12 +162,12 @@ const IntegrationsPage = () => {
                 <div className="flex items-center gap-2">
                   <h3 className="text-sm font-display font-semibold text-foreground">{conn.name}</h3>
                   {conn.isConnected ? (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-mono text-primary bg-primary/10 rounded-full px-2 py-0.5">
-                      <Check className="w-2.5 h-2.5" /> Connected
+                    <span className="inline-flex items-center gap-1 text-xs font-mono text-primary bg-primary/10 rounded-full px-2.5 py-0.5">
+                      <Check className="w-3 h-3" /> Connected
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-mono text-muted-foreground bg-muted/50 rounded-full px-2 py-0.5">
-                      <AlertCircle className="w-2.5 h-2.5" /> Not Connected
+                    <span className="inline-flex items-center gap-1 text-xs font-mono text-muted-foreground bg-muted/50 rounded-full px-2.5 py-0.5">
+                      <AlertCircle className="w-3 h-3" /> Not Connected
                     </span>
                   )}
                 </div>
@@ -177,9 +176,9 @@ const IntegrationsPage = () => {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">{conn.apiKeyLabel}</span>
-                <span className="text-[9px] font-mono text-primary/60 ml-auto">{conn.apiKeyHint}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2">
+                <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">{conn.apiKeyLabel}</span>
+                <span className="text-xs font-mono text-primary/60 sm:ml-auto">{conn.apiKeyHint}</span>
               </div>
 
               {editingKey?.id === conn.id ? (
@@ -220,9 +219,9 @@ const IntegrationsPage = () => {
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span className="text-[9px] font-mono text-muted-foreground uppercase tracking-wider mr-1">Supports:</span>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider mr-1">Supports:</span>
               {conn.supportedServices.map((s) => (
-                <span key={s} className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground capitalize">{s}</span>
+                <span key={s} className="text-xs font-mono px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground capitalize">{s}</span>
               ))}
             </div>
           </motion.div>

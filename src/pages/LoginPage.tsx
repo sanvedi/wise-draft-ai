@@ -28,9 +28,14 @@ const LoginPage = () => {
 
     if (error) {
       setError(error.message);
+    } else {
+      navigate("/", { replace: true });
     }
     setLoading(false);
   };
+
+  if (authLoading) return null;
+  if (user) return <Navigate to="/" replace />;
 
   return (
     <div className="min-h-screen bg-background bg-grid flex items-center justify-center">

@@ -212,13 +212,12 @@ async function runReviewer(ctx: PipelineContext): Promise<StepResult> {
     };
   }
 
-  // ── Branch: if any platform needs revision, run customizer; otherwise skip to publisher
-  const needsCustomization = review.platformFeedback?.some((f: any) => f.needsRevision);
+  // Always run customizer for viral optimization on every platform
   return {
     success: true,
     output: review,
     score: review.complianceScore,
-    nextStep: needsCustomization ? "customizer" : "publisher",
+    nextStep: "customizer",
   };
 }
 

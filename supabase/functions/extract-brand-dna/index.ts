@@ -284,7 +284,12 @@ If social media content is provided, analyze their posting patterns, content the
       brandDNA.logo = branding.images.logo;
     }
 
-    console.log(`Brand DNA extracted for: ${brandDNA.organizationName}`);
+    // Add discovered social profiles
+    if (Object.keys(socialProfiles).length > 0) {
+      brandDNA.socialProfiles = socialProfiles;
+    }
+
+    console.log(`Brand DNA extracted for: ${brandDNA.organizationName} (${Object.keys(socialProfiles).length} social profiles found)`);
 
     return new Response(JSON.stringify({ success: true, brandDNA }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

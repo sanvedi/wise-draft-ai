@@ -19,6 +19,7 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [mediaGenerating, setMediaGenerating] = useState<{ type: "image" | "video"; platform: string } | null>(null);
 
   const activeConversation = store.getActiveConversation();
 
@@ -117,8 +118,51 @@ const ChatPage = () => {
 
   const handleExport = useCallback((messageId: string, format: "slides" | "pdf" | "blog" | "article") => {
     toast({ title: "Export started", description: `Generating ${format}... This will be ready shortly.` });
-    // TODO: Implement actual export via edge functions
   }, [toast]);
+
+  const handleGenerateMedia = useCallback(async (messageId: string, type: "image" | "video", platform: string) => {
+    const convId = store.activeConversationId;
+    if (!convId) return;
+
+    const conv = store.conversations.find((c) => c.id === convId);
+    const msg = conv?.messages.find((m) => m.id === messageId);
+    const platformContent = msg?.generatedContent?.find((c) => c.platform === platform);
+    if (!platformContent) return;
+
+    setMediaGenerating({ type, platform });
+
+    try {
+      const result = await ecosApi.generateMedia(type, platform, platformContent.content, fullBrandDNA);
+
+      if (!result.success) {
+        toast({ title: "Media generation failed", description: result.error, variant: "destructive" });
+        return;
+      }
+
+      const existingMedia = msg?.generatedMedia || {};
+      const updatedMedia = { ...existingMedia };
+
+      if (type === "image" && result.url) {
+        updatedMedia[platform] = { ...updatedMedia[platform], imageUrl: result.url };
+        toast({ title: "Image generated", description: `Image for ${platform} is ready.` });
+      } else if (type === "video") {
+        updatedMedia[platform] = {
+          ...updatedMedia[platform],
+          imageUrl: result.thumbnailUrl || updatedMedia[platform]?.imageUrl,
+        };
+        toast({
+          title: "Video content ready",
+          description: `Thumbnail and video script for ${platform} generated.`,
+        });
+      }
+
+      store.updateMessage(convId, messageId, { generatedMedia: updatedMedia });
+    } catch (e) {
+      toast({ title: "Error", description: "Could not generate media.", variant: "destructive" });
+    } finally {
+      setMediaGenerating(null);
+    }
+  }, [store, fullBrandDNA, toast]);
 
   const handleBrandLoad = useCallback(async (url: string) => {
     toast({ title: "Loading brand kit", description: `Extracting brand identity from ${url}...` });
@@ -138,17 +182,13 @@ const ChatPage = () => {
 
   return (
     <div className="h-screen flex bg-background">
-      {/* FAQ Panel */}
       <AnimatePresence>
         {showFAQ && <FAQPanel onClose={() => setShowFAQ(false)} />}
       </AnimatePresence>
 
-      {/* Sidebar */}
       <ChatSidebar collapsed={!sidebarOpen} onToggle={() => setSidebarOpen(false)} onShowFAQ={() => setShowFAQ(true)} />
 
-      {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <header className="h-12 flex items-center gap-3 border-b border-border px-4 bg-background/80 backdrop-blur-sm">
           {!sidebarOpen && (
             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSidebarOpen(true)}>
@@ -165,7 +205,6 @@ const ChatPage = () => {
           )}
         </header>
 
-        {/* Messages */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
             {!activeConversation || activeConversation.messages.length === 0 ? (
@@ -189,6 +228,8 @@ const ChatPage = () => {
                   onReject={handleReject}
                   onRetry={handleRetry}
                   onExport={handleExport}
+                  onGenerateMedia={handleGenerateMedia}
+                  mediaGenerating={mediaGenerating}
                 />
               ))
             )}
@@ -198,7 +239,6 @@ const ChatPage = () => {
           </div>
         </div>
 
-        {/* Input */}
         <ChatInput
           onSend={handleSend}
           disabled={store.isGenerating}

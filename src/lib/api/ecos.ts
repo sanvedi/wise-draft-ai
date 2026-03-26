@@ -193,4 +193,30 @@ export const ecosApi = {
       stepsCompleted: data.stepsCompleted,
     };
   },
+
+  async generateMedia(
+    type: "image" | "video",
+    platform: string,
+    contentText: string,
+    brandDNA?: any
+  ): Promise<{ success: boolean; url?: string; thumbnailUrl?: string; videoScript?: string; error?: string }> {
+    const { data, error } = await supabase.functions.invoke("generate-media", {
+      body: { type, platform, contentText, brandDNA },
+    });
+
+    if (error) {
+      console.error("Media generation error:", error);
+      return { success: false, error: error.message };
+    }
+    if (data?.error) {
+      return { success: false, error: data.error };
+    }
+
+    return {
+      success: true,
+      url: data.url,
+      thumbnailUrl: data.thumbnailUrl,
+      videoScript: data.videoScript,
+    };
+  },
 };

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { ThumbsUp, ThumbsDown, RotateCcw, Download, FileText, Presentation, BookOpen, Newspaper } from "lucide-react";
+import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
@@ -12,11 +12,21 @@ interface ContentCardProps {
   onReject: () => void;
   onRetry: () => void;
   onExport: (format: "slides" | "pdf" | "blog" | "article") => void;
+  onGenerateMedia?: (type: "image" | "video", platform: string) => void;
+  mediaGenerating?: { type: "image" | "video"; platform: string } | null;
+  generatedMedia?: Record<string, { imageUrl?: string; videoUrl?: string }>;
 }
 
-export function ContentCard({ contents, approval, onApprove, onReject, onRetry, onExport }: ContentCardProps) {
+export function ContentCard({
+  contents, approval, onApprove, onReject, onRetry, onExport,
+  onGenerateMedia, mediaGenerating, generatedMedia,
+}: ContentCardProps) {
   const [activePlatform, setActivePlatform] = useState(0);
   const current = contents[activePlatform];
+  const currentMedia = generatedMedia?.[current?.platform];
+
+  const isMediaGenerating = mediaGenerating &&
+    mediaGenerating.platform === current?.platform;
 
   return (
     <motion.div
@@ -46,24 +56,68 @@ export function ContentCard({ contents, approval, onApprove, onReject, onRetry, 
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 space-y-3">
         <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{current?.content}</p>
         {current?.hashtags && current.hashtags.length > 0 && (
           <p className="text-xs text-primary mt-3">{current.hashtags.join(" ")}</p>
         )}
+
+        {/* Generated media preview */}
+        {currentMedia?.imageUrl && (
+          <div className="rounded-lg overflow-hidden border border-border">
+            <img src={currentMedia.imageUrl} alt={`Generated for ${current.platform}`} className="w-full object-cover max-h-64" />
+          </div>
+        )}
+        {currentMedia?.videoUrl && (
+          <div className="rounded-lg overflow-hidden border border-border">
+            <video src={currentMedia.videoUrl} controls className="w-full max-h-64" />
+          </div>
+        )}
+
+        {/* Media generation buttons */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onGenerateMedia?.("image", current.platform)}
+            disabled={!!isMediaGenerating}
+            className="gap-1.5 text-xs h-7"
+          >
+            {isMediaGenerating && mediaGenerating?.type === "image" ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Image className="w-3.5 h-3.5" />
+            )}
+            {currentMedia?.imageUrl ? "Regenerate Image" : "Generate Image"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => onGenerateMedia?.("video", current.platform)}
+            disabled={!!isMediaGenerating}
+            className="gap-1.5 text-xs h-7"
+          >
+            {isMediaGenerating && mediaGenerating?.type === "video" ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Video className="w-3.5 h-3.5" />
+            )}
+            {currentMedia?.videoUrl ? "Regenerate Video" : "Generate Video"}
+          </Button>
+        </div>
       </div>
 
       {/* Approval actions */}
       {!approval && (
         <div className="px-4 pb-4 flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={onApprove} className="gap-1.5 text-success hover:text-success hover:bg-success/10 h-8">
-            <ThumbsUp className="w-4 h-4" /> Approve
+          <Button size="sm" variant="ghost" onClick={onApprove} className="gap-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 h-8">
+            <ThumbsUp className="w-4 h-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={onReject} className="gap-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 h-8">
-            <ThumbsDown className="w-4 h-4" /> Reject
+          <Button size="sm" variant="ghost" onClick={onReject} className="gap-1.5 text-destructive hover:bg-destructive/10 h-8">
+            <ThumbsDown className="w-4 h-4" />
           </Button>
           <Button size="sm" variant="ghost" onClick={onRetry} className="gap-1.5 text-muted-foreground h-8">
-            <RotateCcw className="w-4 h-4" /> Retry
+            <RotateCcw className="w-4 h-4" />
           </Button>
         </div>
       )}

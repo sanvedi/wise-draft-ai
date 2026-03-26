@@ -1,7 +1,6 @@
 import { motion } from "framer-motion";
 import type { ChatMessage as ChatMessageType } from "@/lib/store/chatStore";
 import { ContentCard } from "./ContentCard";
-import { cn } from "@/lib/utils";
 
 interface ChatMessageProps {
   message: ChatMessageType;
@@ -9,67 +8,50 @@ interface ChatMessageProps {
   onReject: (messageId: string) => void;
   onRetry: (messageId: string) => void;
   onExport: (messageId: string, format: "slides" | "pdf" | "blog" | "article") => void;
+  onGenerateMedia?: (messageId: string, type: "image" | "video", platform: string) => void;
+  mediaGenerating?: { type: "image" | "video"; platform: string } | null;
 }
 
-export function ChatMessage({ message, onApprove, onReject, onRetry, onExport }: ChatMessageProps) {
+export function ChatMessage({ message, onApprove, onReject, onRetry, onExport, onGenerateMedia, mediaGenerating }: ChatMessageProps) {
   const isUser = message.role === "user";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={cn("flex gap-3", isUser ? "justify-end" : "justify-start")}
+      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
     >
-      {!isUser && (
-        <div className="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-1">
-          <span className="text-primary font-display font-bold text-xs">A</span>
-        </div>
-      )}
-
-      <div className={cn("max-w-2xl", isUser ? "order-first" : "")}>
-        {/* Text content */}
-        {message.content && (
-          <div
-            className={cn(
-              "rounded-2xl px-4 py-3 text-sm leading-relaxed",
-              isUser
-                ? "bg-primary text-primary-foreground rounded-br-md"
-                : "bg-muted text-foreground rounded-bl-md"
-            )}
-          >
+      <div className={`max-w-[85%] ${isUser ? "order-2" : "order-1"}`}>
+        {isUser ? (
+          <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2.5 text-sm">
             {message.content}
             {message.platforms && message.platforms.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-primary-foreground/20">
-                {message.platforms.map((p) => (
-                  <span key={p} className={cn("text-xs px-2 py-0.5 rounded-full", isUser ? "bg-primary-foreground/20" : "bg-background")}>
-                    {p}
-                  </span>
-                ))}
-              </div>
+              <p className="text-xs opacity-70 mt-1">{message.platforms.join(", ")}</p>
             )}
           </div>
-        )}
-
-        {/* Generated content card */}
-        {message.generatedContent && message.generatedContent.length > 0 && (
-          <div className="mt-3">
-            <ContentCard
-              contents={message.generatedContent}
-              approval={message.approval}
-              onApprove={() => onApprove(message.id)}
-              onReject={() => onReject(message.id)}
-              onRetry={() => onRetry(message.id)}
-              onExport={(format) => onExport(message.id, format)}
-            />
+        ) : (
+          <div className="space-y-3">
+            {message.content && (
+              <div className="bg-muted rounded-2xl rounded-bl-md px-4 py-2.5 text-sm text-foreground">
+                {message.content}
+              </div>
+            )}
+            {message.generatedContent && message.generatedContent.length > 0 && (
+              <ContentCard
+                contents={message.generatedContent}
+                approval={message.approval}
+                onApprove={() => onApprove(message.id)}
+                onReject={() => onReject(message.id)}
+                onRetry={() => onRetry(message.id)}
+                onExport={(format) => onExport(message.id, format)}
+                onGenerateMedia={(type, platform) => onGenerateMedia?.(message.id, type, platform)}
+                mediaGenerating={mediaGenerating}
+                generatedMedia={message.generatedMedia}
+              />
+            )}
           </div>
         )}
       </div>
-
-      {isUser && (
-        <div className="w-7 h-7 rounded-full bg-foreground/10 flex items-center justify-center flex-shrink-0 mt-1">
-          <span className="text-foreground font-medium text-xs">U</span>
-        </div>
-      )}
     </motion.div>
   );
 }

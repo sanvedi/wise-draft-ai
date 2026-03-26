@@ -10,6 +10,7 @@ export interface ChatMessage {
   approval?: "approved" | "rejected" | null;
   timestamp: Date;
   brandApplied?: boolean;
+  generatedMedia?: Record<string, { imageUrl?: string; videoUrl?: string }>;
 }
 
 export interface GeneratedPlatformContent {

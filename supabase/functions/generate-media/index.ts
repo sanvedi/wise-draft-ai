@@ -45,7 +45,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const brandContext = brandDNA
-      ? `Brand: ${brandDNA.organizationName || ""}. Colors: ${brandDNA.colors?.map((c: any) => c.hex).join(", ") || "modern"}. Tone: ${brandDNA.tone || "professional"}.`
+      ? `Brand: ${brandDNA.organizationName || ""}. Colors: ${brandDNA.colors?.map((c: any) => c.hex).join(", ") || "modern"}. Tone: ${brandDNA.tone || "professional"}.${brandDNA.logo ? ` The brand logo is available at: ${brandDNA.logo} — incorporate the logo subtly into the design.` : ""}`
       : "";
 
     if (type === "image") {

@@ -14,8 +14,12 @@ const iconMap: Record<string, LucideIcon> = {
   later: CalendarClock,
 };
 
+export function getPlatformIcon(platform: string): LucideIcon {
+  return iconMap[platform.toLowerCase()] || Globe2;
+}
+
 export function PlatformIcon({ platform, className }: { platform: string; className?: string }) {
-  const Icon = iconMap[platform.toLowerCase()] || Globe2;
+  const Icon = getPlatformIcon(platform);
   return <Icon className={className} />;
 }
 

@@ -82,6 +82,8 @@ export function ContentCard({
             content={current?.content || ""}
             hashtags={current?.hashtags}
             imageUrl={currentMedia?.imageUrl}
+            brandName={brandName}
+            brandLogoUrl={brandLogoUrl}
           />
         ) : (
           <>

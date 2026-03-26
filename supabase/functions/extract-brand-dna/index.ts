@@ -47,26 +47,42 @@ serve(async (req) => {
 
     console.log("Extracting branding from:", formattedUrl);
 
-    // Step 1: Scrape homepage for branding data
-    const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url: formattedUrl,
-        formats: ["branding", "markdown"],
-        onlyMainContent: false, // Get full page including headers/footers for org name
-      }),
-    });
+    // Step 1: Scrape homepage for branding data (with timeout + retry)
+    let scrapeData: any = null;
+    let scrapeOk = false;
 
-    const scrapeData = await scrapeRes.json();
-    if (!scrapeRes.ok) {
-      console.error("Firecrawl scrape error:", scrapeData);
+    for (const attempt of [1, 2]) {
+      console.log(`Scrape attempt ${attempt} for:`, formattedUrl);
+      const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: formattedUrl,
+          formats: ["branding", "markdown"],
+          onlyMainContent: false,
+          timeout: 60000, // 60s timeout for slow sites
+          waitFor: attempt === 1 ? 3000 : 5000,
+        }),
+      });
+
+      scrapeData = await scrapeRes.json();
+      if (scrapeRes.ok) {
+        scrapeOk = true;
+        break;
+      }
+
       if (scrapeRes.status === 402) {
         return new Response(JSON.stringify({ error: "Firecrawl credits exhausted. Please top up your Firecrawl account." }), {
           status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`Firecrawl scrape failed [${scrapeRes.status}]: ${JSON.stringify(scrapeData)}`);
+
+      // On timeout (408), retry once with longer wait; otherwise break
+      if (scrapeRes.status !== 408 || attempt === 2) {
+        console.warn(`Scrape failed [${scrapeRes.status}] on attempt ${attempt}, continuing with partial data`);
+        break;
+      }
+      console.warn("Scrape timed out, retrying with longer wait...");
     }
 
     const branding = scrapeData.data?.branding || scrapeData.branding || {};

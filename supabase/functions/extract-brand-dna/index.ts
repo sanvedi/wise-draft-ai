@@ -172,6 +172,11 @@ serve(async (req) => {
     // Step 4: Use AI to build comprehensive Brand DNA with social analysis
     const fullContent = homepageMarkdown.slice(0, 5000) + additionalContent.slice(0, 5000);
 
+    const socialContext = socialMediaContent ? `\n\nSOCIAL MEDIA PROFILES CONTENT:\n${socialMediaContent.slice(0, 6000)}` : "";
+    const socialProfilesList = Object.keys(socialProfiles).length > 0
+      ? `\nDiscovered social profiles: ${Object.entries(socialProfiles).map(([k, v]) => `${k}: ${v}`).join(", ")}`
+      : "";
+
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { "Authorization": `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -180,11 +185,15 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `You are a brand strategist. Analyze the website content and extracted branding data to create a comprehensive Brand DNA profile. CRITICAL: Extract the EXACT official organization/company name as it appears on the website. Do not guess or infer — use the name from the page title, header, logo text, or about section.`,
+            content: `You are a brand strategist and social media analyst. Analyze the website content, extracted branding data, AND existing social media posts to create a comprehensive Brand DNA profile. 
+
+CRITICAL: Extract the EXACT official organization/company name as it appears on the website. Do not guess or infer — use the name from the page title, header, logo text, or about section.
+
+If social media content is provided, analyze their posting patterns, content themes, engagement style, hashtag strategy, and tone to inform your brand DNA extraction. The content guidelines should reflect what works on their social channels.`,
           },
           {
             role: "user",
-            content: `Analyze this brand thoroughly.\n\nWebsite URL: ${formattedUrl}\nPage Title: ${metadata.title || "Unknown"}\nMeta Description: ${metadata.description || "None"}\n\nExtracted Branding:\n${JSON.stringify(branding, null, 2)}\n\nWebsite Content:\n${fullContent}`,
+            content: `Analyze this brand thoroughly.\n\nWebsite URL: ${formattedUrl}\nPage Title: ${metadata.title || "Unknown"}\nMeta Description: ${metadata.description || "None"}${socialProfilesList}\n\nExtracted Branding:\n${JSON.stringify(branding, null, 2)}\n\nWebsite Content:\n${fullContent}${socialContext}`,
           },
         ],
         tools: [{

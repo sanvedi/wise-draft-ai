@@ -73,7 +73,7 @@ serve(async (req) => {
     const homepageMarkdown = scrapeData.data?.markdown || scrapeData.markdown || "";
     const metadata = scrapeData.data?.metadata || scrapeData.metadata || {};
 
-    // Step 2: Map the site to discover key pages
+    // Step 2: Map the site to discover key pages + social profiles
     console.log("Mapping site structure...");
     const mapRes = await fetch("https://api.firecrawl.dev/v1/map", {
       method: "POST",
@@ -81,20 +81,38 @@ serve(async (req) => {
       body: JSON.stringify({
         url: formattedUrl,
         search: "about us mission vision",
-        limit: 10,
+        limit: 20,
         includeSubdomains: false,
       }),
     });
 
     let additionalContent = "";
+    let socialMediaContent = "";
+    const socialProfiles: Record<string, string> = {};
+
     if (mapRes.ok) {
       const mapData = await mapRes.json();
       const siteLinks = mapData.links || mapData.data?.links || [];
       console.log(`Found ${siteLinks.length} relevant pages`);
 
+      // Detect social media profile links from the site
+      for (const link of siteLinks) {
+        const l = (link as string).toLowerCase();
+        if (l.includes("instagram.com/") && !socialProfiles.instagram) socialProfiles.instagram = link;
+        if ((l.includes("twitter.com/") || l.includes("x.com/")) && !socialProfiles.x) socialProfiles.x = link;
+        if (l.includes("linkedin.com/") && !socialProfiles.linkedin) socialProfiles.linkedin = link;
+        if (l.includes("facebook.com/") && !socialProfiles.facebook) socialProfiles.facebook = link;
+        if (l.includes("youtube.com/") && !socialProfiles.youtube) socialProfiles.youtube = link;
+      }
+
       // Scrape up to 3 key pages (about, mission, etc.)
       const keyPages = siteLinks
-        .filter((link: string) => link !== formattedUrl && link !== formattedUrl + "/")
+        .filter((link: string) => {
+          const l = link.toLowerCase();
+          return link !== formattedUrl && link !== formattedUrl + "/" &&
+            !l.includes("instagram.com") && !l.includes("twitter.com") && !l.includes("x.com") &&
+            !l.includes("linkedin.com") && !l.includes("facebook.com") && !l.includes("youtube.com");
+        })
         .slice(0, 3);
 
       for (const pageUrl of keyPages) {
@@ -116,7 +134,42 @@ serve(async (req) => {
       }
     }
 
-    // Step 3: Use AI to build comprehensive Brand DNA with org name
+    // Also extract social profile links from the homepage markdown
+    const socialPatterns = [
+      { key: "instagram", pattern: /https?:\/\/(www\.)?instagram\.com\/[^\s"'<>)]+/gi },
+      { key: "x", pattern: /https?:\/\/(www\.)?(twitter|x)\.com\/[^\s"'<>)]+/gi },
+      { key: "linkedin", pattern: /https?:\/\/(www\.)?linkedin\.com\/[^\s"'<>)]+/gi },
+      { key: "facebook", pattern: /https?:\/\/(www\.)?facebook\.com\/[^\s"'<>)]+/gi },
+      { key: "youtube", pattern: /https?:\/\/(www\.)?youtube\.com\/[^\s"'<>)]+/gi },
+    ];
+    for (const { key, pattern } of socialPatterns) {
+      if (!socialProfiles[key]) {
+        const match = homepageMarkdown.match(pattern);
+        if (match) socialProfiles[key] = match[0];
+      }
+    }
+
+    // Step 3: Scrape social media profiles for content analysis
+    console.log("Discovered social profiles:", Object.keys(socialProfiles));
+    for (const [platform, profileUrl] of Object.entries(socialProfiles)) {
+      try {
+        console.log(`Scraping ${platform} profile:`, profileUrl);
+        const socialRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ url: profileUrl, formats: ["markdown"], onlyMainContent: true, waitFor: 2000 }),
+        });
+        if (socialRes.ok) {
+          const socialData = await socialRes.json();
+          const socialMarkdown = socialData.data?.markdown || socialData.markdown || "";
+          socialMediaContent += `\n\n--- SOCIAL: ${platform.toUpperCase()} (${profileUrl}) ---\n${socialMarkdown.slice(0, 3000)}`;
+        }
+      } catch (e) {
+        console.warn(`Failed to scrape ${platform}:`, e);
+      }
+    }
+
+    // Step 4: Use AI to build comprehensive Brand DNA with social analysis
     const fullContent = homepageMarkdown.slice(0, 5000) + additionalContent.slice(0, 5000);
 
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

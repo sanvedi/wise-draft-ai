@@ -202,7 +202,7 @@ export function ContentCard({
               </TooltipTrigger>
               <TooltipContent className="flex items-center gap-1.5">
                 <Cpu className="w-3 h-3" />
-                Engine: Gemini 3.1 Flash Image
+                Engine: Nano Banana (Gemini 2.5 Flash Image)
               </TooltipContent>
             </Tooltip>
             <Tooltip>
@@ -224,7 +224,7 @@ export function ContentCard({
               </TooltipTrigger>
               <TooltipContent className="flex items-center gap-1.5">
                 <Cpu className="w-3 h-3" />
-                Engine: Gemini 3.1 Flash Image + Gemini 3 Flash
+                Engine: Nano Banana + Veo (Video Generation)
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

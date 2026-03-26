@@ -201,7 +201,7 @@ const ChatPage = () => {
             </Button>
           )}
           <span className="text-sm font-medium text-foreground">
-            {activeConversation?.title || "The Content Alchemist"}
+            {activeConversation?.title || "Content Flow"}
           </span>
           {fullBrandDNA && (
             <span className="text-xs bg-primary/10 text-primary rounded-full px-2.5 py-0.5 ml-auto">

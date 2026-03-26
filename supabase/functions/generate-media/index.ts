@@ -107,6 +107,11 @@ serve(async (req) => {
       // Generate a thumbnail/cover image using Nano Banana
       const videoPrompt = `Create a visually compelling thumbnail or cover image for a ${platform} video about: "${contentText.slice(0, 300)}". ${brandContext} Make it eye-catching with bold visual composition suitable for a video thumbnail on ${platform}.`;
 
+      const videoUserContent: any[] = [{ type: "text", text: videoPrompt }];
+      if (brandDNA?.logo) {
+        videoUserContent.push({ type: "image_url", image_url: { url: brandDNA.logo } });
+      }
+
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -115,7 +120,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: VIDEO_THUMBNAIL_ENGINE,
-          messages: [{ role: "user", content: videoPrompt }],
+          messages: [{ role: "user", content: videoUserContent }],
           modalities: ["image", "text"],
         }),
       });

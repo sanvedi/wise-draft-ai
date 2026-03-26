@@ -4,7 +4,7 @@ import { persist } from "zustand/middleware";
 export interface PlatformConnection {
   id: string;
   name: string;
-  type: "buffer" | "custom";
+  type: "buffer" | "direct";
   icon: string;
   description: string;
   apiKeyLabel: string;
@@ -22,12 +22,84 @@ const defaultConnections: PlatformConnection[] = [
     name: "Buffer",
     type: "buffer",
     icon: "buffer",
-    description: "Publish to Facebook, Instagram, LinkedIn, X, YouTube, Pinterest, TikTok, and more via Buffer.",
+    description: "Multi-platform publishing via Buffer",
     apiKeyLabel: "Buffer Access Token",
-    apiKeyHint: "Generate at publish.buffer.com → Settings → API",
+    apiKeyHint: "publish.buffer.com → Settings → API",
     apiKey: "",
     isConnected: false,
-    supportedServices: ["facebook", "instagram", "linkedin", "twitter", "youtube", "pinterest", "tiktok", "mastodon", "bluesky", "threads", "googlebusiness"],
+    supportedServices: ["facebook", "instagram", "linkedin", "twitter", "youtube", "pinterest", "tiktok"],
+  },
+  {
+    id: "instagram",
+    name: "Instagram",
+    type: "direct",
+    icon: "instagram",
+    description: "Direct posting to Instagram Business",
+    apiKeyLabel: "Instagram Access Token",
+    apiKeyHint: "Meta Business Suite → Settings → Access Tokens",
+    apiKey: "",
+    isConnected: false,
+    supportedServices: ["instagram"],
+  },
+  {
+    id: "linkedin",
+    name: "LinkedIn",
+    type: "direct",
+    icon: "linkedin",
+    description: "Direct posting to LinkedIn profiles & pages",
+    apiKeyLabel: "LinkedIn Access Token",
+    apiKeyHint: "linkedin.com/developers → My Apps → Auth",
+    apiKey: "",
+    isConnected: false,
+    supportedServices: ["linkedin"],
+  },
+  {
+    id: "x-twitter",
+    name: "X (Twitter)",
+    type: "direct",
+    icon: "twitter",
+    description: "Direct posting to X / Twitter",
+    apiKeyLabel: "X API Bearer Token",
+    apiKeyHint: "developer.x.com → Projects → Keys & Tokens",
+    apiKey: "",
+    isConnected: false,
+    supportedServices: ["twitter"],
+  },
+  {
+    id: "youtube",
+    name: "YouTube",
+    type: "direct",
+    icon: "youtube",
+    description: "Upload & manage YouTube content",
+    apiKeyLabel: "YouTube API Key",
+    apiKeyHint: "console.cloud.google.com → APIs → YouTube Data API",
+    apiKey: "",
+    isConnected: false,
+    supportedServices: ["youtube"],
+  },
+  {
+    id: "facebook",
+    name: "Facebook",
+    type: "direct",
+    icon: "facebook",
+    description: "Direct posting to Facebook Pages",
+    apiKeyLabel: "Facebook Page Access Token",
+    apiKeyHint: "Meta Business Suite → Settings → Access Tokens",
+    apiKey: "",
+    isConnected: false,
+    supportedServices: ["facebook"],
+  },
+  {
+    id: "google-business",
+    name: "Google Business",
+    type: "direct",
+    icon: "googlebusiness",
+    description: "Post updates to Google Business Profile",
+    apiKeyLabel: "Google API Key",
+    apiKeyHint: "console.cloud.google.com → APIs → Business Profile",
+    apiKey: "",
+    isConnected: false,
+    supportedServices: ["googlebusiness"],
   },
 ];
 
@@ -90,7 +162,8 @@ export const useIntegrationsStore = create<IntegrationsStore>()(
       getConnected: () => get().connections.filter((c) => c.isConnected),
     }),
     {
-      name: "sutra-integrations",
+      name: "alchemist-integrations",
+      version: 2,
     }
   )
 );

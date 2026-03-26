@@ -117,6 +117,48 @@ const BrandDNAPanel = ({ brandData, onExtract, isExtracting }: BrandDNAPanelProp
             </div>
           )}
 
+          {brandData.contentThemes && brandData.contentThemes.length > 0 && (
+            <div>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Content Themes</span>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {brandData.contentThemes.map((t, i) => (
+                  <span key={i} className="text-xs font-mono px-2 py-0.5 rounded-lg bg-agent-customizer/10 text-agent-customizer">{t}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {brandData.hashtagStrategy && brandData.hashtagStrategy.length > 0 && (
+            <div>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Hashtag Strategy</span>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {brandData.hashtagStrategy.map((h, i) => (
+                  <span key={i} className="text-xs font-mono px-2 py-0.5 rounded-lg bg-primary/10 text-primary">{h}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {brandData.socialMediaAnalysis && (
+            <div>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Social Media Analysis</span>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">{brandData.socialMediaAnalysis}</p>
+            </div>
+          )}
+
+          {brandData.socialProfiles && Object.keys(brandData.socialProfiles).length > 0 && (
+            <div>
+              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Social Profiles</span>
+              <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                {Object.entries(brandData.socialProfiles).map(([platform, url]) => (
+                  <a key={platform} href={url} target="_blank" rel="noopener noreferrer" className="text-xs font-mono px-2 py-0.5 rounded-lg bg-muted text-foreground hover:bg-muted/80 capitalize">
+                    {platform}
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div>
             <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Content Guidelines</span>
             <ul className="mt-1.5 space-y-1">

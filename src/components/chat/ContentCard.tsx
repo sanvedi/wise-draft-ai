@@ -230,20 +230,26 @@ export function ContentCard({
           </TooltipProvider>
         </div>
 
+        {/* Separator */}
+        <div className="border-t border-border" />
+
         {/* Export options — always visible */}
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Button size="sm" variant="outline" onClick={() => onExport("slides")} className="gap-1.5 text-xs h-7">
-            <Presentation className="w-3.5 h-3.5" /> Slide Deck
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => onExport("pdf")} className="gap-1.5 text-xs h-7">
-            <FileText className="w-3.5 h-3.5" /> PDF
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => onExport("blog")} className="gap-1.5 text-xs h-7">
-            <BookOpen className="w-3.5 h-3.5" /> Blog Post
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => onExport("article")} className="gap-1.5 text-xs h-7">
-            <Newspaper className="w-3.5 h-3.5" /> Article
-          </Button>
+        <div>
+          <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Export</span>
+          <div className="flex flex-wrap gap-2 mt-1.5">
+            <Button size="sm" variant="outline" onClick={() => onExport("slides")} className="gap-1.5 text-xs h-7">
+              <Presentation className="w-3.5 h-3.5" /> Slide Deck
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onExport("pdf")} className="gap-1.5 text-xs h-7">
+              <FileText className="w-3.5 h-3.5" /> PDF
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onExport("blog")} className="gap-1.5 text-xs h-7">
+              <BookOpen className="w-3.5 h-3.5" /> Blog Post
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => onExport("article")} className="gap-1.5 text-xs h-7">
+              <Newspaper className="w-3.5 h-3.5" /> Article
+            </Button>
+          </div>
         </div>
       </div>
 

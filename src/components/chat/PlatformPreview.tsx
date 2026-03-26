@@ -6,17 +6,40 @@ interface PlatformPreviewProps {
   content: string;
   hashtags?: string[];
   imageUrl?: string;
+  brandName?: string;
+  brandLogoUrl?: string;
 }
 
-function TwitterPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewProps, "platform">) {
+function BrandAvatar({ brandName, brandLogoUrl, size = "md" }: { brandName?: string; brandLogoUrl?: string; size?: "sm" | "md" }) {
+  const dim = size === "sm" ? "w-8 h-8" : "w-10 h-10";
+  if (brandLogoUrl) {
+    return <img src={brandLogoUrl} alt={brandName || "Brand"} className={`${dim} rounded-full object-cover shrink-0`} />;
+  }
+  const initial = (brandName || "B").charAt(0).toUpperCase();
+  return (
+    <div className={`${dim} rounded-full bg-primary/20 flex items-center justify-center shrink-0`}>
+      <span className="font-bold text-primary text-xs">{initial}</span>
+    </div>
+  );
+}
+
+function displayName(brandName?: string) {
+  return brandName || "Your Brand";
+}
+
+function handleName(brandName?: string) {
+  return (brandName || "yourbrand").toLowerCase().replace(/\s+/g, "");
+}
+
+function TwitterPreview({ content, hashtags, imageUrl, brandName, brandLogoUrl }: Omit<PlatformPreviewProps, "platform">) {
   return (
     <div className="bg-black text-white rounded-xl p-4 text-sm max-w-md">
       <div className="flex gap-3">
-        <div className="w-10 h-10 rounded-full bg-muted-foreground/30 shrink-0" />
+        <BrandAvatar brandName={brandName} brandLogoUrl={brandLogoUrl} />
         <div className="space-y-2 flex-1 min-w-0">
           <div className="flex items-center gap-1">
-            <span className="font-bold text-white">Your Brand</span>
-            <span className="text-gray-500">@yourbrand · 1m</span>
+            <span className="font-bold text-white">{displayName(brandName)}</span>
+            <span className="text-gray-500">@{handleName(brandName)} · 1m</span>
           </div>
           <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
           {hashtags && hashtags.length > 0 && (
@@ -40,12 +63,12 @@ function TwitterPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewPro
   );
 }
 
-function InstagramPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewProps, "platform">) {
+function InstagramPreview({ content, hashtags, imageUrl, brandName, brandLogoUrl }: Omit<PlatformPreviewProps, "platform">) {
   return (
     <div className="bg-black text-white rounded-xl overflow-hidden max-w-md">
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-pink-500 to-yellow-400 shrink-0" />
-        <span className="font-semibold text-sm">yourbrand</span>
+        <BrandAvatar brandName={brandName} brandLogoUrl={brandLogoUrl} size="sm" />
+        <span className="font-semibold text-sm">{handleName(brandName)}</span>
         <MoreHorizontal className="w-4 h-4 ml-auto text-gray-400" />
       </div>
       {imageUrl ? (
@@ -63,7 +86,7 @@ function InstagramPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewP
           <Bookmark className="w-5 h-5 ml-auto" />
         </div>
         <p className="text-sm">
-          <span className="font-semibold">yourbrand </span>
+          <span className="font-semibold">{handleName(brandName)} </span>
           {content.length > 120 ? content.slice(0, 120) + "…" : content}
         </p>
         {hashtags && hashtags.length > 0 && (
@@ -74,13 +97,13 @@ function InstagramPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewP
   );
 }
 
-function LinkedInPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewProps, "platform">) {
+function LinkedInPreview({ content, hashtags, imageUrl, brandName, brandLogoUrl }: Omit<PlatformPreviewProps, "platform">) {
   return (
     <div className="bg-white text-gray-900 rounded-xl overflow-hidden max-w-md border border-gray-200">
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-10 h-10 rounded-full bg-blue-600 shrink-0" />
+        <BrandAvatar brandName={brandName} brandLogoUrl={brandLogoUrl} />
         <div>
-          <p className="font-semibold text-sm">Your Brand</p>
+          <p className="font-semibold text-sm">{displayName(brandName)}</p>
           <p className="text-xs text-gray-500">1m · 🌐</p>
         </div>
         <MoreHorizontal className="w-4 h-4 ml-auto text-gray-400" />
@@ -104,7 +127,7 @@ function LinkedInPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewPr
   );
 }
 
-function YouTubePreview({ content, imageUrl }: Omit<PlatformPreviewProps, "platform">) {
+function YouTubePreview({ content, imageUrl, brandName }: Omit<PlatformPreviewProps, "platform">) {
   return (
     <div className="bg-[#0f0f0f] text-white rounded-xl overflow-hidden max-w-md">
       {imageUrl ? (
@@ -116,19 +139,19 @@ function YouTubePreview({ content, imageUrl }: Omit<PlatformPreviewProps, "platf
       )}
       <div className="p-3 space-y-1">
         <p className="text-sm font-medium line-clamp-2">{content.length > 80 ? content.slice(0, 80) + "…" : content}</p>
-        <p className="text-xs text-gray-400">Your Brand · 0 views · Just now</p>
+        <p className="text-xs text-gray-400">{displayName(brandName)} · 0 views · Just now</p>
       </div>
     </div>
   );
 }
 
-function FacebookPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewProps, "platform">) {
+function FacebookPreview({ content, hashtags, imageUrl, brandName, brandLogoUrl }: Omit<PlatformPreviewProps, "platform">) {
   return (
     <div className="bg-white text-gray-900 rounded-xl overflow-hidden max-w-md border border-gray-200">
       <div className="flex items-center gap-3 px-4 py-3">
-        <div className="w-10 h-10 rounded-full bg-blue-500 shrink-0" />
+        <BrandAvatar brandName={brandName} brandLogoUrl={brandLogoUrl} />
         <div>
-          <p className="font-semibold text-sm">Your Brand</p>
+          <p className="font-semibold text-sm">{displayName(brandName)}</p>
           <p className="text-xs text-gray-500">Just now · 🌐</p>
         </div>
       </div>
@@ -150,13 +173,14 @@ function FacebookPreview({ content, hashtags, imageUrl }: Omit<PlatformPreviewPr
   );
 }
 
-function GenericPreview({ platform, content, hashtags, imageUrl }: PlatformPreviewProps) {
+function GenericPreview({ platform, content, hashtags, imageUrl, brandName }: PlatformPreviewProps) {
   const Icon = getPlatformIcon(platform);
   return (
     <div className="bg-card text-foreground rounded-xl border border-border overflow-hidden max-w-md">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-border">
         <Icon className="w-4 h-4" />
         <span className="font-semibold text-sm capitalize">{platform}</span>
+        {brandName && <span className="text-xs text-muted-foreground ml-auto">{brandName}</span>}
       </div>
       <div className="p-4 space-y-2">
         <p className="text-sm whitespace-pre-wrap">{content}</p>
@@ -171,9 +195,9 @@ function GenericPreview({ platform, content, hashtags, imageUrl }: PlatformPrevi
   );
 }
 
-export function PlatformPreview({ platform, content, hashtags, imageUrl }: PlatformPreviewProps) {
+export function PlatformPreview({ platform, content, hashtags, imageUrl, brandName, brandLogoUrl }: PlatformPreviewProps) {
   const p = platform.toLowerCase();
-  const props = { content, hashtags, imageUrl };
+  const props = { content, hashtags, imageUrl, brandName, brandLogoUrl };
 
   switch (p) {
     case "x":

@@ -13,6 +13,10 @@ export interface BrandDNA {
   guidelines: string[];
   keyOfferings?: string[];
   websiteSummary?: string;
+  socialMediaAnalysis?: string;
+  contentThemes?: string[];
+  hashtagStrategy?: string[];
+  socialProfiles?: Record<string, string>;
 }
 
 interface BrandDNAPanelProps {

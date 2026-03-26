@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
-import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2, Eye, EyeOff } from "lucide-react";
+import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2, Eye, EyeOff, Copy, Send, Check, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
 import { getPlatformIcon } from "@/lib/platformIcons";
 import { PlatformPreview } from "./PlatformPreview";
 import { useBrandStore } from "@/lib/store/brandStore";
+import { useToast } from "@/hooks/use-toast";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];
@@ -25,7 +27,9 @@ export function ContentCard({
 }: ContentCardProps) {
   const [activePlatform, setActivePlatform] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { fullBrandDNA } = useBrandStore();
+  const { toast } = useToast();
   const brandName = fullBrandDNA?.organizationName;
   const brandLogoUrl = fullBrandDNA?.logoUrl;
   const current = contents[activePlatform];
@@ -33,6 +37,44 @@ export function ContentCard({
 
   const isMediaGenerating = mediaGenerating &&
     mediaGenerating.platform === current?.platform;
+
+  const handleCopy = async () => {
+    const text = current?.content || "";
+    const hashtags = current?.hashtags?.join(" ") || "";
+    const fullText = hashtags ? `${text}\n\n${hashtags}` : text;
+    
+    try {
+      await navigator.clipboard.writeText(fullText);
+      setCopied(true);
+      toast({ title: "Copied!", description: "Content copied to clipboard." });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({ title: "Copy failed", description: "Could not copy to clipboard.", variant: "destructive" });
+    }
+  };
+
+  const handlePostDirectly = () => {
+    const text = current?.content || "";
+    const hashtags = current?.hashtags?.join(" ") || "";
+    const fullText = encodeURIComponent(hashtags ? `${text}\n\n${hashtags}` : text);
+    const platform = current?.platform?.toLowerCase() || "";
+
+    let url = "";
+    if (platform.includes("twitter") || platform.includes("x")) {
+      url = `https://twitter.com/intent/tweet?text=${fullText}`;
+    } else if (platform.includes("linkedin")) {
+      url = `https://www.linkedin.com/sharing/share-offsite/?url=&summary=${fullText}`;
+    } else if (platform.includes("facebook")) {
+      url = `https://www.facebook.com/sharer/sharer.php?quote=${fullText}`;
+    } else {
+      // Fallback: copy and notify
+      handleCopy();
+      toast({ title: "Platform not supported for direct posting", description: "Content has been copied instead." });
+      return;
+    }
+
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <motion.div
@@ -47,7 +89,7 @@ export function ContentCard({
           return (
             <button
               key={c.platform}
-              onClick={() => setActivePlatform(i)}
+              onClick={() => { setActivePlatform(i); setCopied(false); }}
               className={`flex items-center gap-1.5 px-4 py-2.5 text-xs font-medium transition-colors whitespace-nowrap ${
                 i === activePlatform
                   ? "text-primary border-b-2 border-primary bg-primary/5"
@@ -63,8 +105,40 @@ export function ContentCard({
 
       {/* Content */}
       <div className="p-4 space-y-3">
-        {/* Preview toggle */}
-        <div className="flex justify-end">
+        {/* Preview toggle + Copy/Post actions */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handleCopy}
+                    className="gap-1.5 text-xs h-7 px-2"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? "Copied" : "Copy"}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Copy content to clipboard</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={handlePostDirectly}
+                    className="gap-1.5 text-xs h-7 px-2"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    Post
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Open {current?.platform || "platform"} to post</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
           <Button
             size="sm"
             variant={showPreview ? "default" : "outline"}
@@ -106,36 +180,54 @@ export function ContentCard({
           </div>
         )}
 
-        {/* Media generation buttons */}
+        {/* Media generation buttons with engine labels */}
         <div className="flex flex-wrap gap-2 pt-1">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onGenerateMedia?.("image", current.platform)}
-            disabled={!!isMediaGenerating}
-            className="gap-1.5 text-xs h-7"
-          >
-            {isMediaGenerating && mediaGenerating?.type === "image" ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Image className="w-3.5 h-3.5" />
-            )}
-            {currentMedia?.imageUrl ? "Regenerate Image" : "Generate Image"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => onGenerateMedia?.("video", current.platform)}
-            disabled={!!isMediaGenerating}
-            className="gap-1.5 text-xs h-7"
-          >
-            {isMediaGenerating && mediaGenerating?.type === "video" ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Video className="w-3.5 h-3.5" />
-            )}
-            {currentMedia?.videoUrl ? "Regenerate Video" : "Generate Video"}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onGenerateMedia?.("image", current.platform)}
+                  disabled={!!isMediaGenerating}
+                  className="gap-1.5 text-xs h-7"
+                >
+                  {isMediaGenerating && mediaGenerating?.type === "image" ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Image className="w-3.5 h-3.5" />
+                  )}
+                  {currentMedia?.imageUrl ? "Regenerate Image" : "Generate Image"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-1.5">
+                <Cpu className="w-3 h-3" />
+                Engine: Gemini 3.1 Flash Image
+              </TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onGenerateMedia?.("video", current.platform)}
+                  disabled={!!isMediaGenerating}
+                  className="gap-1.5 text-xs h-7"
+                >
+                  {isMediaGenerating && mediaGenerating?.type === "video" ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Video className="w-3.5 h-3.5" />
+                  )}
+                  {currentMedia?.videoUrl ? "Regenerate Video" : "Generate Video"}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent className="flex items-center gap-1.5">
+                <Cpu className="w-3 h-3" />
+                Engine: Gemini 3.1 Flash Image + Gemini 3 Flash
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 

@@ -32,14 +32,14 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-border">
       <div className="p-4 flex items-center gap-3">
         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <span className="text-primary font-display font-bold text-sm">S</span>
+          <span className="text-primary font-display font-bold text-sm">CF</span>
         </div>
         {!collapsed && (
           <div className="overflow-hidden">
             <h1 className="text-sm font-display font-bold text-foreground tracking-tight whitespace-nowrap">
-              Sutra <span className="text-gradient">Pravartak</span>
+              Content <span className="text-gradient">Flow</span>
             </h1>
-            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">Content Engine</p>
+            <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">From creation to distribution—on autopilot.</p>
           </div>
         )}
       </div>

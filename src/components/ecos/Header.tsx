@@ -13,10 +13,10 @@ const Header = () => (
       </div>
       <div>
         <h1 className="text-lg font-bold text-foreground tracking-tight">
-          Sutra <span className="text-primary">Pravartak</span>
+          Content <span className="text-primary">Flow</span>
         </h1>
         <p className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
-          AI-Powered Viral Content Engine
+          From creation to distribution—on autopilot.
         </p>
       </div>
     </div>

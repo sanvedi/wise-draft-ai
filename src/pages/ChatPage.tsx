@@ -12,8 +12,10 @@ import { ChatInput } from "@/components/chat/ChatInput";
 import { GeneratingIndicator } from "@/components/chat/GeneratingIndicator";
 import { FAQPanel } from "@/components/chat/FAQPanel";
 import { Button } from "@/components/ui/button";
+import { useBrandTheme } from "@/hooks/useBrandTheme";
 
 const ChatPage = () => {
+  useBrandTheme();
   const { toast } = useToast();
   const { fullBrandDNA, setBrandData, setFullBrandDNA } = useBrandStore();
   const store = useChatStore();

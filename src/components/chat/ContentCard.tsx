@@ -23,6 +23,7 @@ export function ContentCard({
   onGenerateMedia, mediaGenerating, generatedMedia,
 }: ContentCardProps) {
   const [activePlatform, setActivePlatform] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
   const current = contents[activePlatform];
   const currentMedia = generatedMedia?.[current?.platform];
 

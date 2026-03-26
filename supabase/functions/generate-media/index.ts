@@ -45,11 +45,18 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const brandContext = brandDNA
-      ? `Brand: ${brandDNA.organizationName || ""}. Colors: ${brandDNA.colors?.map((c: any) => c.hex).join(", ") || "modern"}. Tone: ${brandDNA.tone || "professional"}.`
+      ? `Brand: ${brandDNA.organizationName || ""}. Colors: ${brandDNA.colors?.map((c: any) => c.hex).join(", ") || "modern"}. Tone: ${brandDNA.tone || "professional"}.${brandDNA.logo ? ` The brand logo is available at: ${brandDNA.logo} — incorporate the logo subtly into the design.` : ""}`
       : "";
 
     if (type === "image") {
       const imagePrompt = `Create a stunning, professional social media ${platform} image for this content: "${contentText.slice(0, 300)}". ${brandContext} Style: modern, high-quality, scroll-stopping visual. No text overlays unless essential. Aspect ratio suitable for ${platform}.`;
+
+      const userContent: any[] = [{ type: "text", text: imagePrompt }];
+
+      // If brand logo URL exists, pass it as a reference image
+      if (brandDNA?.logo) {
+        userContent.push({ type: "image_url", image_url: { url: brandDNA.logo } });
+      }
 
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -59,7 +66,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: IMAGE_ENGINE,
-          messages: [{ role: "user", content: imagePrompt }],
+          messages: [{ role: "user", content: userContent }],
           modalities: ["image", "text"],
         }),
       });
@@ -100,6 +107,11 @@ serve(async (req) => {
       // Generate a thumbnail/cover image using Nano Banana
       const videoPrompt = `Create a visually compelling thumbnail or cover image for a ${platform} video about: "${contentText.slice(0, 300)}". ${brandContext} Make it eye-catching with bold visual composition suitable for a video thumbnail on ${platform}.`;
 
+      const videoUserContent: any[] = [{ type: "text", text: videoPrompt }];
+      if (brandDNA?.logo) {
+        videoUserContent.push({ type: "image_url", image_url: { url: brandDNA.logo } });
+      }
+
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -108,7 +120,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: VIDEO_THUMBNAIL_ENGINE,
-          messages: [{ role: "user", content: videoPrompt }],
+          messages: [{ role: "user", content: videoUserContent }],
           modalities: ["image", "text"],
         }),
       });

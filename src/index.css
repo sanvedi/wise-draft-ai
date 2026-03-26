@@ -6,6 +6,8 @@
 
 @layer base {
   :root {
+    --font-brand-heading: 'Fraunces', serif;
+    --font-brand-body: 'DM Sans', sans-serif;
     --background: 0 0% 100%;
     --foreground: 240 10% 10%;
 
@@ -103,13 +105,13 @@
 
 @layer utilities {
   .font-display {
-    font-family: 'Fraunces', serif;
+    font-family: var(--font-brand-heading, 'Fraunces', serif);
   }
   .font-mono {
     font-family: 'JetBrains Mono', monospace;
   }
   .font-sans {
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-brand-body, 'DM Sans', sans-serif);
   }
   .text-gradient {
     display: inline-block;

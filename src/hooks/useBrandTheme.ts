@@ -57,9 +57,34 @@ export function useBrandTheme() {
         "--sidebar-primary", "--sidebar-primary-foreground", "--sidebar-ring",
       ];
       props.forEach((p) => root.style.removeProperty(p));
+      root.style.removeProperty("--font-brand-heading");
+      root.style.removeProperty("--font-brand-body");
+
+      // Remove dynamically loaded brand font links
+      document.querySelectorAll("link[data-brand-font]").forEach((el) => el.remove());
       return;
     }
 
+    // ── Fonts ──
+    // Load brand fonts from Google Fonts and apply as CSS custom properties
+    const fonts = brandData.fonts || [];
+    // Remove old brand font links
+    document.querySelectorAll("link[data-brand-font]").forEach((el) => el.remove());
+
+    if (fonts.length > 0) {
+      const families = fonts.map((f) => f.replace(/ /g, "+")).join("&family=");
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = `https://fonts.googleapis.com/css2?family=${families}&display=swap`;
+      link.setAttribute("data-brand-font", "true");
+      document.head.appendChild(link);
+
+      // First font → headings, second (or first) → body
+      root.style.setProperty("--font-brand-heading", `"${fonts[0]}", sans-serif`);
+      root.style.setProperty("--font-brand-body", `"${fonts[fonts.length > 1 ? 1 : 0]}", sans-serif`);
+    }
+
+    // ── Colors ──
     // Find primary color (first color, or one named "primary"/"main"/"brand")
     const primaryColor = brandData.colors.find((c) =>
       /primary|main|brand/i.test(c.name)
@@ -91,7 +116,6 @@ export function useBrandTheme() {
 
     if (accentColor?.hex && accentColor.hex !== primaryColor.hex) {
       const accentHSL = hexToHSL(accentColor.hex);
-      // Use accent color subtly in gradient
       root.style.setProperty("--brand-accent", accentHSL);
     }
 

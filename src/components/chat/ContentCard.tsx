@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
 import { getPlatformIcon } from "@/lib/platformIcons";
 import { PlatformPreview } from "./PlatformPreview";
+import { useBrandStore } from "@/lib/store/brandStore";
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];

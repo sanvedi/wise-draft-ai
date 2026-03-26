@@ -86,7 +86,18 @@ async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: S
 
 function buildBrandContext(brandDNA: any): string {
   if (!brandDNA) return "";
-  return `\n\nBRAND DNA CONTEXT — STRICTLY follow this for ALL content:\n- ORGANIZATION: ${brandDNA.organizationName || "Unknown"}\n- Tagline: ${brandDNA.tagline || "N/A"}\n- About: ${brandDNA.websiteSummary || "N/A"}\n- Key Offerings: ${brandDNA.keyOfferings?.join(", ") || "N/A"}\n- Tone: ${brandDNA.tone}\n- Values: ${brandDNA.values?.join(", ")}\n- Personality: ${brandDNA.personality}\n- Target Audience: ${brandDNA.targetAudience}\n- Guidelines:\n${brandDNA.guidelines?.map((g: string) => `  • ${g}`).join("\n")}\n- Brand Colors: ${brandDNA.colors?.map((c: any) => `${c.name}: ${c.hex}`).join(", ")}`;
+  let ctx = `\n\nBRAND DNA CONTEXT — STRICTLY follow this for ALL content:\n- ORGANIZATION: ${brandDNA.organizationName || "Unknown"}\n- Tagline: ${brandDNA.tagline || "N/A"}\n- About: ${brandDNA.websiteSummary || "N/A"}\n- Key Offerings: ${brandDNA.keyOfferings?.join(", ") || "N/A"}\n- Tone: ${brandDNA.tone}\n- Values: ${brandDNA.values?.join(", ")}\n- Personality: ${brandDNA.personality}\n- Target Audience: ${brandDNA.targetAudience}\n- Guidelines:\n${brandDNA.guidelines?.map((g: string) => `  • ${g}`).join("\n")}\n- Brand Colors: ${brandDNA.colors?.map((c: any) => `${c.name}: ${c.hex}`).join(", ")}`;
+  
+  if (brandDNA.socialMediaAnalysis) {
+    ctx += `\n\nSOCIAL MEDIA ANALYSIS — Use this to inform content style:\n${brandDNA.socialMediaAnalysis}`;
+  }
+  if (brandDNA.contentThemes?.length) {
+    ctx += `\n- Content Themes: ${brandDNA.contentThemes.join(", ")}`;
+  }
+  if (brandDNA.hashtagStrategy?.length) {
+    ctx += `\n- Recommended Hashtags: ${brandDNA.hashtagStrategy.join(", ")}`;
+  }
+  return ctx;
 }
 
 // ── Agent Steps ─────────────────────────────────────────────────────────

@@ -24,10 +24,10 @@ const HomePage = () => {
         className="max-w-2xl space-y-5 mb-20"
       >
         <p className="text-xs font-mono text-muted-foreground uppercase tracking-widest">
-          Multi-Agent Content Engine
+          From creation to distribution—on autopilot.
         </p>
         <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tight leading-[1.1]">
-          Sutra <span className="text-gradient">Pravartak</span>
+          Content <span className="text-gradient">Flow</span>
         </h1>
         <p className="text-base text-muted-foreground leading-relaxed max-w-lg">
           Five AI agents draft, review, optimize, and publish your content

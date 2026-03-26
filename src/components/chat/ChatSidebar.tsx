@@ -27,9 +27,9 @@ export function ChatSidebar({ collapsed, onToggle, onShowFAQ, onShowAccount }: C
       <div className="p-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <span className="text-primary font-display font-bold text-xs">A</span>
+            <span className="text-primary font-display font-bold text-xs">CF</span>
           </div>
-          <span className="font-display font-semibold text-sm text-foreground">The Content Alchemist</span>
+          <span className="font-display font-semibold text-sm text-foreground">Content Flow</span>
         </div>
         <button onClick={onToggle} className="text-muted-foreground hover:text-foreground p-1">
           <PanelLeftClose className="w-4 h-4" />

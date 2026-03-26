@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
 import { getPlatformIcon } from "@/lib/platformIcons";
+import { PlatformPreview } from "./PlatformPreview";
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];
@@ -22,6 +23,7 @@ export function ContentCard({
   onGenerateMedia, mediaGenerating, generatedMedia,
 }: ContentCardProps) {
   const [activePlatform, setActivePlatform] = useState(0);
+  const [showPreview, setShowPreview] = useState(false);
   const current = contents[activePlatform];
   const currentMedia = generatedMedia?.[current?.platform];
 
@@ -57,18 +59,42 @@ export function ContentCard({
 
       {/* Content */}
       <div className="p-4 space-y-3">
-        <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{current?.content}</p>
-        {current?.hashtags && current.hashtags.length > 0 && (
-          <p className="text-xs text-primary mt-3">{current.hashtags.join(" ")}</p>
+        {/* Preview toggle */}
+        <div className="flex justify-end">
+          <Button
+            size="sm"
+            variant={showPreview ? "default" : "outline"}
+            onClick={() => setShowPreview(!showPreview)}
+            className="gap-1.5 text-xs h-7"
+          >
+            {showPreview ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            {showPreview ? "Hide Preview" : "Preview"}
+          </Button>
+        </div>
+
+        {showPreview ? (
+          <PlatformPreview
+            platform={current?.platform}
+            content={current?.content || ""}
+            hashtags={current?.hashtags}
+            imageUrl={currentMedia?.imageUrl}
+          />
+        ) : (
+          <>
+            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{current?.content}</p>
+            {current?.hashtags && current.hashtags.length > 0 && (
+              <p className="text-xs text-primary mt-3">{current.hashtags.join(" ")}</p>
+            )}
+          </>
         )}
 
         {/* Generated media preview */}
-        {currentMedia?.imageUrl && (
+        {!showPreview && currentMedia?.imageUrl && (
           <div className="rounded-lg overflow-hidden border border-border">
             <img src={currentMedia.imageUrl} alt={`Generated for ${current.platform}`} className="w-full object-cover max-h-64" />
           </div>
         )}
-        {currentMedia?.videoUrl && (
+        {!showPreview && currentMedia?.videoUrl && (
           <div className="rounded-lg overflow-hidden border border-border">
             <video src={currentMedia.videoUrl} controls className="w-full max-h-64" />
           </div>

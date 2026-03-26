@@ -1,4 +1,4 @@
-import { Plus, MessageSquare, Trash2, HelpCircle, LogOut, PanelLeftClose } from "lucide-react";
+import { Plus, MessageSquare, Trash2, HelpCircle, PanelLeftClose } from "lucide-react";
 import { useChatStore } from "@/lib/store/chatStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -11,11 +11,12 @@ interface ChatSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
   onShowFAQ: () => void;
+  onShowAccount: () => void;
 }
 
-export function ChatSidebar({ collapsed, onToggle, onShowFAQ }: ChatSidebarProps) {
+export function ChatSidebar({ collapsed, onToggle, onShowFAQ, onShowAccount }: ChatSidebarProps) {
   const { conversations, activeConversationId, createConversation, setActiveConversation, deleteConversation } = useChatStore();
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
   if (collapsed) return null;
@@ -90,15 +91,15 @@ export function ChatSidebar({ collapsed, onToggle, onShowFAQ }: ChatSidebarProps
           </Button>
         </div>
         {user && (
-          <div className="flex items-center gap-2 px-1">
+          <button
+            onClick={onShowAccount}
+            className="w-full flex items-center gap-2 px-1 py-1.5 rounded-lg hover:bg-accent/50 transition-colors group"
+          >
             <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center text-xs font-semibold text-primary flex-shrink-0">
               {user.email?.charAt(0).toUpperCase()}
             </div>
-            <span className="text-xs text-muted-foreground truncate flex-1">{user.email}</span>
-            <button onClick={signOut} className="text-muted-foreground hover:text-destructive p-1" title="Sign out">
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
-          </div>
+            <span className="text-xs text-muted-foreground truncate flex-1 text-left group-hover:text-foreground transition-colors">{user.email}</span>
+          </button>
         )}
       </div>
     </aside>

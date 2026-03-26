@@ -1,6 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { PanelLeft } from "lucide-react";
+import { AccountPanel } from "@/components/chat/AccountPanel";
 import { useToast } from "@/hooks/use-toast";
 import { ecosApi } from "@/lib/api/ecos";
 import { useBrandStore } from "@/lib/store/brandStore";
@@ -19,6 +20,7 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [mediaGenerating, setMediaGenerating] = useState<{ type: "image" | "video"; platform: string } | null>(null);
 
   const activeConversation = store.getActiveConversation();
@@ -184,9 +186,10 @@ const ChatPage = () => {
     <div className="h-screen flex bg-background">
       <AnimatePresence>
         {showFAQ && <FAQPanel onClose={() => setShowFAQ(false)} />}
+        {showAccount && <AccountPanel onClose={() => setShowAccount(false)} />}
       </AnimatePresence>
 
-      <ChatSidebar collapsed={!sidebarOpen} onToggle={() => setSidebarOpen(false)} onShowFAQ={() => setShowFAQ(true)} />
+      <ChatSidebar collapsed={!sidebarOpen} onToggle={() => setSidebarOpen(false)} onShowFAQ={() => setShowFAQ(true)} onShowAccount={() => setShowAccount(true)} />
 
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-12 flex items-center gap-3 border-b border-border px-4 bg-background/80 backdrop-blur-sm">

@@ -1,6 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { PanelLeft } from "lucide-react";
+import { AccountPanel } from "@/components/chat/AccountPanel";
 import { useToast } from "@/hooks/use-toast";
 import { ecosApi } from "@/lib/api/ecos";
 import { useBrandStore } from "@/lib/store/brandStore";

@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
 import { getPlatformIcon } from "@/lib/platformIcons";
 import { PlatformPreview } from "./PlatformPreview";
+import { useBrandStore } from "@/lib/store/brandStore";
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];
@@ -24,6 +25,9 @@ export function ContentCard({
 }: ContentCardProps) {
   const [activePlatform, setActivePlatform] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
+  const { fullBrandDNA } = useBrandStore();
+  const brandName = fullBrandDNA?.organizationName;
+  const brandLogoUrl = fullBrandDNA?.logoUrl;
   const current = contents[activePlatform];
   const currentMedia = generatedMedia?.[current?.platform];
 
@@ -78,6 +82,8 @@ export function ContentCard({
             content={current?.content || ""}
             hashtags={current?.hashtags}
             imageUrl={currentMedia?.imageUrl}
+            brandName={brandName}
+            brandLogoUrl={brandLogoUrl}
           />
         ) : (
           <>

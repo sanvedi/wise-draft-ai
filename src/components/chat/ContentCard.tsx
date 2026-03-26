@@ -25,6 +25,10 @@ export function ContentCard({
 }: ContentCardProps) {
   const [activePlatform, setActivePlatform] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
+  const { fullBrandDNA } = useBrandStore();
+  const brandName = fullBrandDNA?.organizationName;
+  const brandLogoUrl = fullBrandDNA?.logoUrl;
+  const current = contents[activePlatform];
   const current = contents[activePlatform];
   const currentMedia = generatedMedia?.[current?.platform];
 

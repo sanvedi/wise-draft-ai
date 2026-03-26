@@ -1,4 +1,5 @@
 import { Plus, MessageSquare, Trash2, HelpCircle, PanelLeftClose } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { useChatStore } from "@/lib/store/chatStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -26,8 +27,8 @@ export function ChatSidebar({ collapsed, onToggle, onShowFAQ, onShowAccount }: C
       {/* Header */}
       <div className="p-4 flex items-center justify-between border-b border-border">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center">
-            <span className="text-primary font-display font-bold text-xs">CF</span>
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center overflow-hidden">
+            <img src={logo} alt="Content Flow" className="w-7 h-7 object-contain" />
           </div>
           <span className="font-display font-semibold text-sm text-foreground">Content Flow</span>
         </div>

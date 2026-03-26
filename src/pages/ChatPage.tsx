@@ -20,6 +20,7 @@ const ChatPage = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showFAQ, setShowFAQ] = useState(false);
+  const [showAccount, setShowAccount] = useState(false);
   const [mediaGenerating, setMediaGenerating] = useState<{ type: "image" | "video"; platform: string } | null>(null);
 
   const activeConversation = store.getActiveConversation();

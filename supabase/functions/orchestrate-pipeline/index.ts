@@ -212,13 +212,12 @@ async function runReviewer(ctx: PipelineContext): Promise<StepResult> {
     };
   }
 
-  // ── Branch: if any platform needs revision, run customizer; otherwise skip to publisher
-  const needsCustomization = review.platformFeedback?.some((f: any) => f.needsRevision);
+  // Always run customizer for viral optimization on every platform
   return {
     success: true,
     output: review,
     score: review.complianceScore,
-    nextStep: needsCustomization ? "customizer" : "publisher",
+    nextStep: "customizer",
   };
 }
 
@@ -259,11 +258,26 @@ async function runCustomizer(ctx: PipelineContext): Promise<StepResult> {
     [
       {
         role: "system",
-        content: `You are a viral optimization specialist. Take reviewed content and maximize its viral potential while maintaining brand compliance.${brandContext}`,
+        content: `You are an elite viral content strategist and platform-native optimization specialist. Your job is to transform good content into SCROLL-STOPPING, SHARE-WORTHY content tailored to each platform's unique algorithm and culture.
+
+PLATFORM-SPECIFIC RULES you MUST follow:
+${Object.entries(platformSpecs).map(([p, s]) => `- ${p}: ${s.instruction} (max ${s.charLimit} chars)`).join("\n")}
+
+OPTIMIZATION TECHNIQUES:
+- Use pattern interrupts, curiosity gaps, and psychological triggers
+- Adapt tone, formatting, and length to each platform's native style
+- Instagram: visual storytelling, line breaks, emojis, trending hashtags
+- X/Twitter: hot takes, punchy one-liners, threads for depth
+- LinkedIn: thought leadership hooks, short paragraphs, engagement questions
+- YouTube: curiosity-driven titles, keyword-rich descriptions, timestamps
+- Facebook: emotional storytelling, shareable narratives, clear CTAs
+- Google Business: local relevance, action-oriented, concise
+
+Maintain brand compliance while maximizing virality.${brandContext}`,
       },
       {
         role: "user",
-        content: `Optimize this content for maximum virality. Apply reviewer feedback.\n\nOriginal content:\n${JSON.stringify(draftOutput.contents, null, 2)}\n\nReviewer feedback:\n${JSON.stringify(reviewOutput, null, 2)}`,
+        content: `Optimize this content for MAXIMUM virality on each platform. Apply reviewer feedback and platform-specific best practices.\n\nOriginal content:\n${JSON.stringify(draftOutput.contents, null, 2)}\n\nReviewer feedback:\n${JSON.stringify(reviewOutput, null, 2)}\n\nFor each platform, rewrite the content to be truly platform-native and viral. Don't just tweak — transform it.`,
       },
     ],
     [customizeTool],

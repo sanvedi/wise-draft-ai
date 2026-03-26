@@ -51,6 +51,13 @@ serve(async (req) => {
     if (type === "image") {
       const imagePrompt = `Create a stunning, professional social media ${platform} image for this content: "${contentText.slice(0, 300)}". ${brandContext} Style: modern, high-quality, scroll-stopping visual. No text overlays unless essential. Aspect ratio suitable for ${platform}.`;
 
+      const userContent: any[] = [{ type: "text", text: imagePrompt }];
+
+      // If brand logo URL exists, pass it as a reference image
+      if (brandDNA?.logo) {
+        userContent.push({ type: "image_url", image_url: { url: brandDNA.logo } });
+      }
+
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -59,7 +66,7 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: IMAGE_ENGINE,
-          messages: [{ role: "user", content: imagePrompt }],
+          messages: [{ role: "user", content: userContent }],
           modalities: ["image", "text"],
         }),
       });

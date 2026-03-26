@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2 } from "lucide-react";
+import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
 import { getPlatformIcon } from "@/lib/platformIcons";
+import { PlatformPreview } from "./PlatformPreview";
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];

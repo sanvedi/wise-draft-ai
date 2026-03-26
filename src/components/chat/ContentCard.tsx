@@ -229,6 +229,22 @@ export function ContentCard({
             </Tooltip>
           </TooltipProvider>
         </div>
+
+        {/* Export options — always visible */}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <Button size="sm" variant="outline" onClick={() => onExport("slides")} className="gap-1.5 text-xs h-7">
+            <Presentation className="w-3.5 h-3.5" /> Slide Deck
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onExport("pdf")} className="gap-1.5 text-xs h-7">
+            <FileText className="w-3.5 h-3.5" /> PDF
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onExport("blog")} className="gap-1.5 text-xs h-7">
+            <BookOpen className="w-3.5 h-3.5" /> Blog Post
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => onExport("article")} className="gap-1.5 text-xs h-7">
+            <Newspaper className="w-3.5 h-3.5" /> Article
+          </Button>
+        </div>
       </div>
 
       {/* Approval actions */}
@@ -246,26 +262,9 @@ export function ContentCard({
         </div>
       )}
 
-      {/* Approved state with exports */}
       {approval === "approved" && (
-        <div className="px-4 pb-4 space-y-3">
-          <div className="flex items-center gap-2 text-xs text-primary">
-            <ThumbsUp className="w-3.5 h-3.5" /> Content approved
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => onExport("slides")} className="gap-1.5 text-xs h-8">
-              <Presentation className="w-3.5 h-3.5" /> Slide Deck
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => onExport("pdf")} className="gap-1.5 text-xs h-8">
-              <FileText className="w-3.5 h-3.5" /> PDF
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => onExport("blog")} className="gap-1.5 text-xs h-8">
-              <BookOpen className="w-3.5 h-3.5" /> Blog Post
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => onExport("article")} className="gap-1.5 text-xs h-8">
-              <Newspaper className="w-3.5 h-3.5" /> Article
-            </Button>
-          </div>
+        <div className="px-4 pb-4 flex items-center gap-2 text-xs text-primary">
+          <ThumbsUp className="w-3.5 h-3.5" /> Content approved
         </div>
       )}
 

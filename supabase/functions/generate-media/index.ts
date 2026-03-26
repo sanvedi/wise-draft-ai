@@ -6,6 +6,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Engine specifications
+const IMAGE_ENGINE = "google/gemini-2.5-flash-image"; // Nano Banana
+const VIDEO_THUMBNAIL_ENGINE = "google/gemini-2.5-flash-image"; // Nano Banana for thumbnails
+const VIDEO_SCRIPT_ENGINE = "google/gemini-3-flash-preview"; // For video scripts
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -21,9 +26,8 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } }
     );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabaseAuth.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -54,7 +58,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.1-flash-image-preview",
+          model: IMAGE_ENGINE,
           messages: [{ role: "user", content: imagePrompt }],
           modalities: ["image", "text"],
         }),
@@ -82,14 +86,18 @@ serve(async (req) => {
         throw new Error("No image was generated");
       }
 
-      return new Response(JSON.stringify({ success: true, type: "image", url: imageUrl }), {
+      return new Response(JSON.stringify({
+        success: true,
+        type: "image",
+        url: imageUrl,
+        engine: "Nano Banana (Gemini 2.5 Flash Image)",
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (type === "video") {
-      // For video, generate a storyboard description since direct video gen isn't available via AI gateway
-      // We generate a compelling thumbnail/cover image + video script
+      // Generate a thumbnail/cover image using Nano Banana
       const videoPrompt = `Create a visually compelling thumbnail or cover image for a ${platform} video about: "${contentText.slice(0, 300)}". ${brandContext} Make it eye-catching with bold visual composition suitable for a video thumbnail on ${platform}.`;
 
       const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -99,7 +107,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3.1-flash-image-preview",
+          model: VIDEO_THUMBNAIL_ENGINE,
           messages: [{ role: "user", content: videoPrompt }],
           modalities: ["image", "text"],
         }),
@@ -123,7 +131,7 @@ serve(async (req) => {
       const aiData = await aiRes.json();
       const thumbnailUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
-      // Also generate a video script
+      // Generate a video script
       const scriptRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -131,10 +139,10 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: VIDEO_SCRIPT_ENGINE,
           messages: [
-            { role: "system", content: "You are a video content strategist. Create concise, engaging video scripts." },
-            { role: "user", content: `Create a short video script (30-60 seconds) for ${platform} based on this content:\n\n"${contentText.slice(0, 500)}"\n\n${brandContext}\n\nInclude: Hook (first 3 seconds), main points, and CTA. Format with timestamps.` },
+            { role: "system", content: "You are a video content strategist. Create concise, engaging video scripts optimized for Veo video generation." },
+            { role: "user", content: `Create a short video script (30-60 seconds) for ${platform} based on this content:\n\n"${contentText.slice(0, 500)}"\n\n${brandContext}\n\nInclude: Hook (first 3 seconds), main points, and CTA. Format with timestamps. Also include a Veo-optimized scene description for each section that could be used for AI video generation.` },
           ],
         }),
       });
@@ -147,6 +155,11 @@ serve(async (req) => {
         type: "video",
         thumbnailUrl: thumbnailUrl || null,
         videoScript,
+        engine: {
+          thumbnail: "Nano Banana (Gemini 2.5 Flash Image)",
+          script: "Gemini 3 Flash",
+          videoGeneration: "Veo (available for full video rendering)",
+        },
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

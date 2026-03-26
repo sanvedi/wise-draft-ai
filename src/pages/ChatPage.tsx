@@ -218,7 +218,7 @@ const ChatPage = () => {
                   <span className="text-primary font-display font-bold text-lg">A</span>
                 </div>
                 <h1 className="text-2xl font-display font-bold text-foreground">
-                  The Content <span className="text-gradient">Alchemist</span>
+                  The Content <span className="text-primary">Alchemist</span>
                 </h1>
                 <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
                   Transform your ideas into polished, platform-ready content. Select your platforms, describe your content, and let the magic happen.

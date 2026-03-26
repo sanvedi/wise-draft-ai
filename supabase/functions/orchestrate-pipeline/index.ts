@@ -61,11 +61,6 @@ const AGENT_MODELS: Record<StepName, string> = {
   learner: "google/gemini-3-flash-preview",        // Analytics summarization
 };
 
-// Agents that use extended reasoning mode
-const AGENT_REASONING: Partial<Record<StepName, { effort: string }>> = {
-  reviewer: { effort: "medium" },
-};
-
 async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: StepName) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
@@ -73,7 +68,6 @@ async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: S
   const model = step ? AGENT_MODELS[step] : "google/gemini-3-flash-preview";
   const body: any = { model, messages, stream: false };
   if (tools) { body.tools = tools; body.tool_choice = toolChoice; }
-  if (step && AGENT_REASONING[step]) { body.reasoning = AGENT_REASONING[step]; }
 
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",

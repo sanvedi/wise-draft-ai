@@ -111,10 +111,10 @@ const LoginPage = () => {
       >
         <div className="text-center space-y-2">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-            <span className="text-primary font-display font-bold text-lg">A</span>
+            <span className="text-primary font-display font-bold text-lg">CF</span>
           </div>
           <h1 className="text-xl font-display font-bold text-foreground">
-            The Content <span className="text-gradient">Alchemist</span>
+            Content <span className="text-gradient">Flow</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             {mode === "login" ? "Welcome back" : "Create your account"}

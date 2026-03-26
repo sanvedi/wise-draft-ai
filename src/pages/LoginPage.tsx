@@ -1,13 +1,39 @@
 import { motion } from "framer-motion";
-import { LogIn, UserPlus, Eye, EyeOff } from "lucide-react";
+import { LogIn, UserPlus, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+function generateCaptcha() {
+  const ops = ["+", "-", "×"] as const;
+  const op = ops[Math.floor(Math.random() * ops.length)];
+  let a: number, b: number, answer: number;
+
+  switch (op) {
+    case "+":
+      a = Math.floor(Math.random() * 50) + 1;
+      b = Math.floor(Math.random() * 50) + 1;
+      answer = a + b;
+      break;
+    case "-":
+      a = Math.floor(Math.random() * 50) + 10;
+      b = Math.floor(Math.random() * a);
+      answer = a - b;
+      break;
+    case "×":
+      a = Math.floor(Math.random() * 12) + 1;
+      b = Math.floor(Math.random() * 12) + 1;
+      answer = a * b;
+      break;
+  }
+
+  return { question: `${a} ${op} ${b}`, answer: answer! };
+}
 
 const LoginPage = () => {
   const { user, loading: authLoading } = useAuth();
@@ -20,11 +46,31 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [mode, setMode] = useState<"login" | "signup">("login");
 
+  const [captcha, setCaptcha] = useState(generateCaptcha);
+  const [captchaInput, setCaptchaInput] = useState("");
+
+  const refreshCaptcha = useCallback(() => {
+    setCaptcha(generateCaptcha());
+    setCaptchaInput("");
+  }, []);
+
+  useEffect(() => {
+    refreshCaptcha();
+  }, [mode, refreshCaptcha]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setSuccess(null);
+
+    // Validate captcha
+    if (parseInt(captchaInput) !== captcha.answer) {
+      setError("Incorrect answer. Please try again.");
+      refreshCaptcha();
+      return;
+    }
+
+    setLoading(true);
 
     if (mode === "signup") {
       const { error } = await supabase.auth.signUp({
@@ -46,6 +92,7 @@ const LoginPage = () => {
       }
     }
     setLoading(false);
+    refreshCaptcha();
   };
 
   if (authLoading) return null;
@@ -108,6 +155,34 @@ const LoginPage = () => {
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
+            </div>
+          </div>
+
+          {/* Arithmetic Captcha */}
+          <div className="space-y-1.5">
+            <Label className="text-sm text-foreground">Verify you're human</Label>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-muted rounded-lg px-4 py-2.5 flex items-center justify-between">
+                <span className="text-sm font-mono font-semibold text-foreground tracking-wide">
+                  {captcha.question} = ?
+                </span>
+                <button
+                  type="button"
+                  onClick={refreshCaptcha}
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  title="New question"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <Input
+                type="number"
+                value={captchaInput}
+                onChange={(e) => setCaptchaInput(e.target.value)}
+                placeholder="?"
+                required
+                className="w-20 bg-background border-border text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
             </div>
           </div>
 

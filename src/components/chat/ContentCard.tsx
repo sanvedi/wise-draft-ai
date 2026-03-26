@@ -29,7 +29,6 @@ export function ContentCard({
   const brandName = fullBrandDNA?.organizationName;
   const brandLogoUrl = fullBrandDNA?.logoUrl;
   const current = contents[activePlatform];
-  const current = contents[activePlatform];
   const currentMedia = generatedMedia?.[current?.platform];
 
   const isMediaGenerating = mediaGenerating &&

@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Header = () => (
   <motion.header
@@ -8,8 +8,8 @@ const Header = () => (
     className="flex items-center justify-between py-3"
   >
     <div className="flex items-center gap-3">
-      <div className="p-2 rounded-lg bg-primary/10 glow-primary">
-        <Sparkles className="w-5 h-5 text-primary" />
+      <div className="p-1.5 rounded-lg overflow-hidden">
+        <img src={logo} alt="Content Flow" className="w-6 h-6 object-contain" />
       </div>
       <div>
         <h1 className="text-lg font-bold text-foreground tracking-tight">

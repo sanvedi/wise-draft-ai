@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import logo from "@/assets/logo.png";
 import { LogIn, UserPlus, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,9 +111,7 @@ const LoginPage = () => {
         className="bg-card border border-border rounded-2xl p-8 sm:p-10 max-w-sm w-full space-y-6"
       >
         <div className="text-center space-y-2">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto">
-            <span className="text-primary font-display font-bold text-lg">CF</span>
-          </div>
+          <img src={logo} alt="Content Flow" className="h-12 mx-auto object-contain" />
           <h1 className="text-xl font-display font-bold text-foreground">
             Content <span className="text-gradient">Flow</span>
           </h1>

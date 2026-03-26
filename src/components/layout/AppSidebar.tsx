@@ -1,4 +1,5 @@
 import { Home, Palette, PenTool, CheckSquare, BarChart3, Plug, LogOut } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLocation } from "react-router-dom";
@@ -31,8 +32,8 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r border-border">
       <div className="p-4 flex items-center gap-3">
-        <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <span className="text-primary font-display font-bold text-sm">CF</span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+          <img src={logo} alt="Content Flow" className="w-8 h-8 object-contain" />
         </div>
         {!collapsed && (
           <div className="overflow-hidden">

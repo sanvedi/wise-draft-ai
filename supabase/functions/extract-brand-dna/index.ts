@@ -85,9 +85,9 @@ serve(async (req) => {
       console.warn("Scrape timed out, retrying with longer wait...");
     }
 
-    const branding = scrapeData.data?.branding || scrapeData.branding || {};
-    const homepageMarkdown = scrapeData.data?.markdown || scrapeData.markdown || "";
-    const metadata = scrapeData.data?.metadata || scrapeData.metadata || {};
+    const branding = scrapeOk ? (scrapeData?.data?.branding || scrapeData?.branding || {}) : {};
+    const homepageMarkdown = scrapeOk ? (scrapeData?.data?.markdown || scrapeData?.markdown || "") : "";
+    const metadata = scrapeOk ? (scrapeData?.data?.metadata || scrapeData?.metadata || {}) : { title: new URL(formattedUrl).hostname };
 
     // Step 2: Map the site to discover key pages + social profiles
     console.log("Mapping site structure...");

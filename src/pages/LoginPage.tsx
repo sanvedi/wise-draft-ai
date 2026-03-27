@@ -112,9 +112,6 @@ const LoginPage = () => {
       >
         <div className="text-center space-y-2">
           <img src={logo} alt="Content Flow" className="h-12 mx-auto object-contain" />
-          <h1 className="text-xl font-display font-bold text-foreground">
-            Content <span className="text-gradient">Flow</span>
-          </h1>
           <p className="text-sm text-muted-foreground">
             {mode === "login" ? "Welcome back" : "Create your account"}
           </p>

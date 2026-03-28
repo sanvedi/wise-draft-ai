@@ -1,11 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
-import { Globe, Upload, FileText, Check, Loader2, Palette, Building2, Type, X } from "lucide-react";
+import { Globe, Upload, FileText, Check, Loader2, Palette, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { ecosApi } from "@/lib/api/ecos";
 import { useBrandStore } from "@/lib/store/brandStore";
-import { useRef } from "react";
+import { BrandDNAEditor } from "@/components/brand/BrandDNAEditor";
 
 interface UploadedDoc {
   id: string;
@@ -129,86 +129,16 @@ const BrandPage = () => {
         </motion.div>
       </div>
 
-      {/* Brand DNA Display */}
+      {/* Brand DNA Display & Editor */}
       {brandData && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="glass rounded-xl p-6 space-y-5">
           <div className="flex items-center gap-2">
-            <Palette className="w-5 h-5 text-agent-customizer" />
-            <h2 className="text-lg font-display font-semibold text-foreground">Extracted Brand DNA</h2>
+            <Palette className="w-5 h-5 text-primary" />
+            <h2 className="text-lg font-display font-semibold text-foreground">Brand DNA</h2>
             <span className="text-xs font-mono text-primary bg-primary/10 rounded-full px-2.5 py-0.5 ml-auto">Active</span>
           </div>
-
-          {brandData.organizationName && (
-            <div className="flex items-center gap-3">
-              <Building2 className="w-5 h-5 text-primary" />
-              <span className="text-xl font-display font-bold text-foreground">{brandData.organizationName}</span>
-            </div>
-          )}
-
-          {brandData.websiteSummary && (
-            <p className="text-sm text-muted-foreground leading-relaxed">{brandData.websiteSummary}</p>
-          )}
-
-          {brandData.tagline && (
-            <p className="text-sm italic text-foreground/80 glass rounded-lg px-4 py-2">"{brandData.tagline}"</p>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* Colors */}
-            <div className="space-y-2">
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Colors</span>
-              <div className="flex gap-2 flex-wrap">
-                {brandData.colors.map((c) => (
-                  <div key={c.hex} className="flex flex-col items-center gap-1">
-                    <div className="w-10 h-10 rounded-lg border border-border" style={{ backgroundColor: c.hex }} />
-                    <span className="text-xs font-mono text-muted-foreground">{c.name}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Typography */}
-            <div className="space-y-2">
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Typography</span>
-              <div className="flex gap-2 flex-wrap">
-                {brandData.fonts.map((f) => (
-                  <span key={f} className="text-xs font-mono px-3 py-1 glass rounded-lg text-foreground flex items-center gap-1.5">
-                    <Type className="w-3 h-3" /> {f}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Tone */}
-            <div className="space-y-2">
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Brand Tone</span>
-              <p className="text-sm text-foreground">{brandData.tone}</p>
-            </div>
-          </div>
-
-          {/* Key Offerings */}
-          {brandData.keyOfferings && brandData.keyOfferings.length > 0 && (
-            <div className="space-y-2">
-              <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Key Offerings</span>
-              <div className="flex gap-2 flex-wrap">
-                {brandData.keyOfferings.map((o, i) => (
-                  <span key={i} className="text-xs font-mono px-3 py-1 rounded-lg bg-primary/10 text-primary">{o}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Guidelines */}
-          <div className="space-y-2">
-            <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Content Guidelines</span>
-            <ul className="space-y-1">
-              {brandData.guidelines.map((g, i) => (
-                <li key={i} className="text-sm text-muted-foreground flex items-start gap-2">
-                  <span className="text-primary mt-0.5">•</span> {g}
-                </li>
-              ))}
-            </ul>
-          </div>
+          <p className="text-xs text-muted-foreground">Click the pencil icon on any section to edit inline.</p>
+          <BrandDNAEditor />
         </motion.div>
       )}
     </div>

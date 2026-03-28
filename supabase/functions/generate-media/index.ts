@@ -6,10 +6,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Engine specifications
-const IMAGE_ENGINE = "google/gemini-2.5-flash-image"; // Nano Banana
-const VIDEO_THUMBNAIL_ENGINE = "google/gemini-2.5-flash-image"; // Nano Banana for thumbnails
-const VIDEO_SCRIPT_ENGINE = "google/gemini-3-flash-preview"; // For video scripts
+const IMAGE_ENGINE = "google/gemini-3.1-flash-image-preview";
+const VIDEO_SCRIPT_ENGINE = "google/gemini-3-flash-preview";
+
+function extractImageUrl(aiData: any): string | null {
+  const message = aiData?.choices?.[0]?.message;
+  if (!message) return null;
+
+  // Try images array with image_url.url
+  const images = message.images;
+  if (Array.isArray(images) && images.length > 0) {
+    const img = images[0];
+    if (typeof img === "string") return img;
+    if (img?.image_url?.url) return img.image_url.url;
+    if (img?.url) return img.url;
+    if (img?.b64_json) return `data:image/png;base64,${img.b64_json}`;
+  }
+
+  // Try content array for multimodal responses
+  const content = message.content;
+  if (Array.isArray(content)) {
+    for (const part of content) {
+      if (part.type === "image_url" && part.image_url?.url) return part.image_url.url;
+      if (part.type === "image" && part.url) return part.url;
+    }
+  }
+
+  return null;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -45,31 +69,30 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const brandContext = brandDNA
-      ? `Brand: ${brandDNA.organizationName || ""}. Colors: ${brandDNA.colors?.map((c: any) => c.hex).join(", ") || "modern"}. Tone: ${brandDNA.tone || "professional"}.${brandDNA.logo ? ` The brand logo is available at: ${brandDNA.logo} — incorporate the logo subtly into the design.` : ""}`
+      ? `Brand: ${brandDNA.organizationName || ""}. Colors: ${brandDNA.colors?.map((c: any) => c.hex).join(", ") || "modern"}. Tone: ${brandDNA.tone || "professional"}.`
       : "";
+
+    const aiHeaders = {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    };
+
+    async function callImageModel(prompt: string): Promise<Response> {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: aiHeaders,
+        body: JSON.stringify({
+          model: IMAGE_ENGINE,
+          messages: [{ role: "user", content: prompt }],
+        }),
+      });
+      return res;
+    }
 
     if (type === "image") {
       const imagePrompt = `Create a stunning, professional social media ${platform} image for this content: "${contentText.slice(0, 300)}". ${brandContext} Style: modern, high-quality, scroll-stopping visual. No text overlays unless essential. Aspect ratio suitable for ${platform}.`;
 
-      const userContent: any[] = [{ type: "text", text: imagePrompt }];
-
-      // If brand logo URL exists, pass it as a reference image
-      if (brandDNA?.logo) {
-        userContent.push({ type: "image_url", image_url: { url: brandDNA.logo } });
-      }
-
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: IMAGE_ENGINE,
-          messages: [{ role: "user", content: userContent }],
-          modalities: ["image", "text"],
-        }),
-      });
+      const aiRes = await callImageModel(imagePrompt);
 
       if (!aiRes.ok) {
         if (aiRes.status === 429) {
@@ -83,95 +106,81 @@ serve(async (req) => {
           });
         }
         const errText = await aiRes.text();
+        console.error("Image generation AI error:", errText);
         throw new Error(`AI gateway error [${aiRes.status}]: ${errText}`);
       }
 
       const aiData = await aiRes.json();
-      const imageUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+      console.log("Image AI response keys:", JSON.stringify(Object.keys(aiData.choices?.[0]?.message || {})));
+      const imageUrl = extractImageUrl(aiData);
 
       if (!imageUrl) {
-        throw new Error("No image was generated");
+        console.error("No image in response. Full message:", JSON.stringify(aiData.choices?.[0]?.message).slice(0, 500));
+        // Fall back to text description if no image was generated
+        const textContent = aiData.choices?.[0]?.message?.content;
+        return new Response(JSON.stringify({
+          success: true,
+          type: "image",
+          url: null,
+          description: typeof textContent === "string" ? textContent : "Image generation completed but no image URL was returned.",
+          engine: IMAGE_ENGINE,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       return new Response(JSON.stringify({
         success: true,
         type: "image",
         url: imageUrl,
-        engine: "Nano Banana (Gemini 2.5 Flash Image)",
+        engine: IMAGE_ENGINE,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (type === "video") {
-      // Generate a thumbnail/cover image using Nano Banana
       const videoPrompt = `Create a visually compelling thumbnail or cover image for a ${platform} video about: "${contentText.slice(0, 300)}". ${brandContext} Make it eye-catching with bold visual composition suitable for a video thumbnail on ${platform}.`;
 
-      const videoUserContent: any[] = [{ type: "text", text: videoPrompt }];
-      if (brandDNA?.logo) {
-        videoUserContent.push({ type: "image_url", image_url: { url: brandDNA.logo } });
+      const [thumbnailRes, scriptRes] = await Promise.all([
+        callImageModel(videoPrompt),
+        fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: aiHeaders,
+          body: JSON.stringify({
+            model: VIDEO_SCRIPT_ENGINE,
+            messages: [
+              { role: "system", content: "You are a video content strategist. Create concise, engaging video scripts." },
+              { role: "user", content: `Create a short video script (30-60 seconds) for ${platform} based on this content:\n\n"${contentText.slice(0, 500)}"\n\n${brandContext}\n\nInclude: Hook (first 3 seconds), main points, and CTA. Format with timestamps.` },
+            ],
+          }),
+        }),
+      ]);
+
+      let thumbnailUrl: string | null = null;
+      if (thumbnailRes.ok) {
+        const thumbData = await thumbnailRes.json();
+        thumbnailUrl = extractImageUrl(thumbData);
+      } else {
+        const errText = await thumbnailRes.text();
+        console.warn("Thumbnail generation failed:", errText);
       }
 
-      const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: VIDEO_THUMBNAIL_ENGINE,
-          messages: [{ role: "user", content: videoUserContent }],
-          modalities: ["image", "text"],
-        }),
-      });
-
-      if (!aiRes.ok) {
-        if (aiRes.status === 429) {
-          return new Response(JSON.stringify({ error: "Rate limit reached. Please try again shortly." }), {
-            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        if (aiRes.status === 402) {
-          return new Response(JSON.stringify({ error: "Credits exhausted. Please add funds." }), {
-            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-        const errText = await aiRes.text();
-        throw new Error(`AI gateway error [${aiRes.status}]: ${errText}`);
+      let videoScript = "";
+      if (scriptRes.ok) {
+        const scriptData = await scriptRes.json();
+        videoScript = scriptData.choices?.[0]?.message?.content || "";
+      } else {
+        const errText = await scriptRes.text();
+        console.warn("Script generation failed:", errText);
       }
-
-      const aiData = await aiRes.json();
-      const thumbnailUrl = aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-      // Generate a video script
-      const scriptRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: VIDEO_SCRIPT_ENGINE,
-          messages: [
-            { role: "system", content: "You are a video content strategist. Create concise, engaging video scripts optimized for Veo video generation." },
-            { role: "user", content: `Create a short video script (30-60 seconds) for ${platform} based on this content:\n\n"${contentText.slice(0, 500)}"\n\n${brandContext}\n\nInclude: Hook (first 3 seconds), main points, and CTA. Format with timestamps. Also include a Veo-optimized scene description for each section that could be used for AI video generation.` },
-          ],
-        }),
-      });
-
-      const scriptData = await scriptRes.json();
-      const videoScript = scriptData.choices?.[0]?.message?.content || "";
 
       return new Response(JSON.stringify({
         success: true,
         type: "video",
-        thumbnailUrl: thumbnailUrl || null,
+        thumbnailUrl,
         videoScript,
-        engine: {
-          thumbnail: "Nano Banana (Gemini 2.5 Flash Image)",
-          script: "Gemini 3 Flash",
-          videoGeneration: "Veo (available for full video rendering)",
-        },
+        engine: { thumbnail: IMAGE_ENGINE, script: VIDEO_SCRIPT_ENGINE },
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

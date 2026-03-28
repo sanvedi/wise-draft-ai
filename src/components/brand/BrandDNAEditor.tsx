@@ -1,5 +1,4 @@
-import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 import {
   Pencil, Plus, X, Trash2, Check,
 } from "lucide-react";
@@ -9,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useBrandStore } from "@/lib/store/brandStore";
 import type { BrandDNA } from "@/components/ecos/BrandDNAPanel";
 import { useToast } from "@/hooks/use-toast";
+import { BrandColorPicker } from "./BrandColorPicker";
 
 export function BrandDNAEditor() {
   const { brandData, setBrandData, setFullBrandDNA } = useBrandStore();
@@ -28,8 +28,6 @@ export function BrandDNAEditor() {
   // New item inputs
   const [newGuideline, setNewGuideline] = useState("");
   const [newFont, setNewFont] = useState("");
-  const [newColorName, setNewColorName] = useState("");
-  const [newColorHex, setNewColorHex] = useState("#000000");
   const [newOffering, setNewOffering] = useState("");
 
   if (!brandData) return null;
@@ -128,37 +126,7 @@ export function BrandDNAEditor() {
       <div className="space-y-2">
         <SectionHeader label="Colors" section="colors" />
         {editing === "colors" ? (
-          <div className="space-y-2">
-            <div className="flex gap-2 flex-wrap">
-              {editColors.map((c, i) => (
-                <div key={i} className="flex items-center gap-1.5 glass rounded-lg px-2 py-1.5">
-                  <input type="color" value={c.hex} onChange={e => {
-                    const updated = [...editColors];
-                    updated[i] = { ...updated[i], hex: e.target.value };
-                    setEditColors(updated);
-                  }} className="w-6 h-6 rounded border-0 cursor-pointer" />
-                  <Input value={c.name} onChange={e => {
-                    const updated = [...editColors];
-                    updated[i] = { ...updated[i], name: e.target.value };
-                    setEditColors(updated);
-                  }} className="w-20 text-xs h-6 px-1.5" />
-                  <button onClick={() => setEditColors(editColors.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-2">
-              <input type="color" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} className="w-7 h-7 rounded border-0 cursor-pointer" />
-              <Input value={newColorName} onChange={e => setNewColorName(e.target.value)} placeholder="Color name" className="text-xs h-7 w-28" />
-              <Button size="sm" variant="ghost" onClick={() => {
-                if (newColorName.trim()) {
-                  setEditColors([...editColors, { name: newColorName.trim(), hex: newColorHex }]);
-                  setNewColorName(""); setNewColorHex("#000000");
-                }
-              }} className="h-7 px-2"><Plus className="w-3 h-3" /></Button>
-            </div>
-          </div>
+          <BrandColorPicker colors={editColors} onChange={setEditColors} />
         ) : (
           <div className="flex gap-2 flex-wrap">
             {brandData.colors.map(c => (

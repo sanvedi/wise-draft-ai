@@ -7,8 +7,8 @@ const corsHeaders = {
 };
 
 // Engine specifications
-const IMAGE_ENGINE = "google/gemini-2.5-flash-image"; // Nano Banana
-const VIDEO_THUMBNAIL_ENGINE = "google/gemini-2.5-flash-image"; // Nano Banana for thumbnails
+const IMAGE_ENGINE = "google/gemini-3.1-flash-image-preview"; // Fast image generation
+const VIDEO_THUMBNAIL_ENGINE = "google/gemini-3.1-flash-image-preview"; // For thumbnails
 const VIDEO_SCRIPT_ENGINE = "google/gemini-3-flash-preview"; // For video scripts
 
 serve(async (req) => {

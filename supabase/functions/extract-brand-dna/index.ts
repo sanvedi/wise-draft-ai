@@ -45,6 +45,15 @@ serve(async (req) => {
     let formattedUrl = url.trim();
     if (!formattedUrl.startsWith("http")) formattedUrl = `https://${formattedUrl}`;
 
+    // Validate URL before proceeding
+    try {
+      new URL(formattedUrl);
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid URL. Please provide a valid website address (e.g. https://example.com)." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     console.log("Extracting branding from:", formattedUrl);
 
     // Step 1: Scrape homepage for branding data (with timeout + retry)

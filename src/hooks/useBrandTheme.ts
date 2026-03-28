@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTheme } from "next-themes";
 import { useBrandStore } from "@/lib/store/brandStore";
 
 /**
@@ -39,15 +40,22 @@ function adjustLightness(hsl: string, amount: number): string {
   return `${h} ${s}% ${l}%`;
 }
 
+function parseLightness(hsl: string): number {
+  const parts = hsl.match(/(\d+)\s+(\d+)%\s+(\d+)%/);
+  return parts ? parseInt(parts[3]) : 50;
+}
+
 /**
- * Hook that applies brand colors to CSS custom properties when brand data changes.
- * Call this once at the app root level.
+ * Hook that applies brand colors to CSS custom properties when brand data or theme changes.
+ * Adapts colors for both light and dark modes.
  */
 export function useBrandTheme() {
   const { brandData } = useBrandStore();
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     const root = document.documentElement;
+    const isDark = resolvedTheme === "dark";
 
     if (!brandData || brandData.colors.length === 0) {
       // Remove brand overrides — revert to defaults
@@ -55,6 +63,7 @@ export function useBrandTheme() {
       const props = [
         "--primary", "--primary-foreground", "--ring",
         "--sidebar-primary", "--sidebar-primary-foreground", "--sidebar-ring",
+        "--accent", "--accent-foreground",
       ];
       props.forEach((p) => root.style.removeProperty(p));
       root.style.removeProperty("--font-brand-heading");
@@ -66,9 +75,7 @@ export function useBrandTheme() {
     }
 
     // ── Fonts ──
-    // Load brand fonts from Google Fonts and apply as CSS custom properties
     const fonts = brandData.fonts || [];
-    // Remove old brand font links
     document.querySelectorAll("link[data-brand-font]").forEach((el) => el.remove());
 
     if (fonts.length > 0) {
@@ -79,25 +86,33 @@ export function useBrandTheme() {
       link.setAttribute("data-brand-font", "true");
       document.head.appendChild(link);
 
-      // First font → headings, second (or first) → body
       root.style.setProperty("--font-brand-heading", `"${fonts[0]}", sans-serif`);
       root.style.setProperty("--font-brand-body", `"${fonts[fonts.length > 1 ? 1 : 0]}", sans-serif`);
     }
 
     // ── Colors ──
-    // Find primary color (first color, or one named "primary"/"main"/"brand")
     const primaryColor = brandData.colors.find((c) =>
       /primary|main|brand/i.test(c.name)
     ) || brandData.colors[0];
 
     if (!primaryColor?.hex) return;
 
-    const primaryHSL = hexToHSL(primaryColor.hex);
+    const baseHSL = hexToHSL(primaryColor.hex);
+    const baseLightness = parseLightness(baseHSL);
 
-    // Determine if primary is light or dark to set foreground
-    const parts = primaryHSL.match(/(\d+)\s+(\d+)%\s+(\d+)%/);
-    const lightness = parts ? parseInt(parts[3]) : 50;
-    const foregroundHSL = lightness > 55 ? "225 20% 5%" : "0 0% 100%";
+    // Adapt primary for the current mode:
+    // In light mode, ensure primary is dark enough for good contrast on white
+    // In dark mode, ensure primary is bright enough for good contrast on dark bg
+    let primaryHSL: string;
+    if (isDark) {
+      primaryHSL = baseLightness < 40 ? adjustLightness(baseHSL, 15) : baseHSL;
+    } else {
+      primaryHSL = baseLightness > 60 ? adjustLightness(baseHSL, -15) : baseHSL;
+    }
+
+    // Foreground: white text on dark primary, dark text on light primary
+    const adjustedLightness = parseLightness(primaryHSL);
+    const foregroundHSL = adjustedLightness > 55 ? "225 20% 5%" : "0 0% 100%";
 
     // Apply primary
     root.style.setProperty("--primary", primaryHSL);
@@ -109,14 +124,24 @@ export function useBrandTheme() {
     root.style.setProperty("--sidebar-primary-foreground", foregroundHSL);
     root.style.setProperty("--sidebar-ring", primaryHSL);
 
-    // If there's a secondary/accent color, apply it
+    // Accent color
     const accentColor = brandData.colors.find((c) =>
       /accent|secondary|highlight/i.test(c.name)
     ) || brandData.colors[1];
 
     if (accentColor?.hex && accentColor.hex !== primaryColor.hex) {
-      const accentHSL = hexToHSL(accentColor.hex);
-      root.style.setProperty("--brand-accent", accentHSL);
+      const accentBaseHSL = hexToHSL(accentColor.hex);
+      const accentLightness = parseLightness(accentBaseHSL);
+      let accentHSL: string;
+      if (isDark) {
+        accentHSL = accentLightness < 30 ? adjustLightness(accentBaseHSL, 10) : accentBaseHSL;
+      } else {
+        accentHSL = accentLightness > 70 ? adjustLightness(accentBaseHSL, -10) : accentBaseHSL;
+      }
+      root.style.setProperty("--accent", accentHSL);
+      // Accent foreground: ensure readability
+      const accentFgLightness = parseLightness(accentHSL);
+      root.style.setProperty("--accent-foreground", accentFgLightness > 55 ? "225 20% 5%" : "0 0% 100%");
     }
 
     // Update gradient text class
@@ -139,5 +164,5 @@ export function useBrandTheme() {
       const s = document.getElementById("brand-gradient-style");
       if (s) s.remove();
     };
-  }, [brandData]);
+  }, [brandData, resolvedTheme]);
 }

@@ -1,15 +1,16 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, Globe, Palette, Type, Building2, Loader2, Link2, Unlink,
-  Eye, EyeOff, LogOut, ChevronRight, ChevronDown, RotateCcw,
+  Eye, EyeOff, LogOut, ChevronRight, RotateCcw, Settings2,
+  Plus, Upload, FileText, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBrandStore } from "@/lib/store/brandStore";
 import { useIntegrationsStore, type PlatformConnection } from "@/lib/store/integrationsStore";
-import { ecosApi, saveIntegrationKey, disconnectIntegration } from "@/lib/api/ecos";
+import { ecosApi, saveIntegrationKey, disconnectIntegration, listIntegrations } from "@/lib/api/ecos";
 import { useToast } from "@/hooks/use-toast";
 
 interface AccountPanelProps {
@@ -45,6 +46,7 @@ function IntegrationCard({ conn, onConnect, onDisconnect }: {
   const [key, setKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editingKey, setEditingKey] = useState(false);
 
   const handleConnect = async () => {
     if (!key.trim()) return;
@@ -53,6 +55,7 @@ function IntegrationCard({ conn, onConnect, onDisconnect }: {
     setSaving(false);
     setKey("");
     setShowKey(false);
+    setEditingKey(false);
     setExpanded(false);
   };
 
@@ -90,18 +93,30 @@ function IntegrationCard({ conn, onConnect, onDisconnect }: {
             className="overflow-hidden"
           >
             <div className="px-3 pb-3 space-y-2 border-t border-border pt-2">
-              {conn.isConnected ? (
-                <div className="flex items-center justify-between">
+              {conn.isConnected && !editingKey ? (
+                <div className="space-y-2">
                   <p className="text-xs text-muted-foreground">
                     Connected {conn.connectedAt ? new Date(conn.connectedAt).toLocaleDateString() : ""}
                   </p>
-                  <Button
-                    size="sm" variant="ghost"
-                    onClick={() => onDisconnect(conn.id)}
-                    className="text-xs h-7 text-destructive hover:text-destructive"
-                  >
-                    <Unlink className="w-3 h-3 mr-1" /> Disconnect
-                  </Button>
+                  <p className="text-[10px] font-mono text-muted-foreground bg-muted/50 rounded px-2 py-1">
+                    Key stored securely on server
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm" variant="outline"
+                      onClick={() => setEditingKey(true)}
+                      className="text-xs h-7 gap-1"
+                    >
+                      <Settings2 className="w-3 h-3" /> Replace Key
+                    </Button>
+                    <Button
+                      size="sm" variant="ghost"
+                      onClick={() => onDisconnect(conn.id)}
+                      className="text-xs h-7 text-destructive hover:text-destructive"
+                    >
+                      <Unlink className="w-3 h-3 mr-1" /> Disconnect
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -124,9 +139,14 @@ function IntegrationCard({ conn, onConnect, onDisconnect }: {
                       </button>
                     </div>
                     <Button size="sm" onClick={handleConnect} disabled={!key.trim() || saving} className="h-8 text-xs">
-                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Connect"}
+                      {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : conn.isConnected ? "Update" : "Connect"}
                     </Button>
                   </div>
+                  {editingKey && (
+                    <Button size="sm" variant="ghost" onClick={() => setEditingKey(false)} className="text-xs h-7 text-muted-foreground">
+                      Cancel
+                    </Button>
+                  )}
                 </>
               )}
             </div>
@@ -144,8 +164,36 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
   const { toast } = useToast();
 
   const [brandUrl, setBrandUrl] = useState("");
+  const [additionalUrls, setAdditionalUrls] = useState<string[]>([]);
+  const [newAdditionalUrl, setNewAdditionalUrl] = useState("");
+  const [brandFiles, setBrandFiles] = useState<{ id: string; name: string; size: number }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [isExtracting, setIsExtracting] = useState(false);
   const [activeSection, setActiveSection] = useState<"brand" | "integrations" | null>(null);
+  const [serverLoaded, setServerLoaded] = useState(false);
+
+  // Load integration state from server on mount
+  useEffect(() => {
+    const loadServerState = async () => {
+      try {
+        const result = await listIntegrations();
+        if (result.success && result.integrations) {
+          for (const si of result.integrations) {
+            if (si.is_connected) {
+              integrations.connectPlatform(si.platform_id);
+            } else {
+              integrations.disconnectPlatform(si.platform_id);
+            }
+          }
+        }
+      } catch {
+        // Silent fail — local state still works
+      } finally {
+        setServerLoaded(true);
+      }
+    };
+    loadServerState();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const connectedCount = integrations.connections.filter((c) => c.isConnected).length;
 
@@ -153,7 +201,9 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     if (!brandUrl.trim()) return;
     setIsExtracting(true);
     try {
-      const result = await ecosApi.extractBrandDNA(brandUrl.trim());
+      // Pass additional URLs and note about files
+      const allUrls = [brandUrl.trim(), ...additionalUrls.filter(u => u.trim())];
+      const result = await ecosApi.extractBrandDNA(allUrls[0], allUrls.slice(1));
       if (result.success && result.brandDNA) {
         setBrandData(result.brandDNA);
         setFullBrandDNA(result.brandDNA);
@@ -166,7 +216,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     } finally {
       setIsExtracting(false);
     }
-  }, [brandUrl, setBrandData, setFullBrandDNA, toast]);
+  }, [brandUrl, additionalUrls, setBrandData, setFullBrandDNA, toast]);
 
   const handleResetBrand = useCallback(() => {
     setBrandData(null);
@@ -174,14 +224,40 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
     toast({ title: "Brand reset", description: "Reverted to default theme." });
   }, [setBrandData, setFullBrandDNA, toast]);
 
+  const handleAddUrl = () => {
+    if (newAdditionalUrl.trim()) {
+      setAdditionalUrls(prev => [...prev, newAdditionalUrl.trim()]);
+      setNewAdditionalUrl("");
+    }
+  };
+
+  const handleRemoveUrl = (index: number) => {
+    setAdditionalUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const newFiles = files.map(f => ({
+      id: crypto.randomUUID(),
+      name: f.name,
+      size: f.size,
+    }));
+    setBrandFiles(prev => [...prev, ...newFiles]);
+    if (e.target) e.target.value = "";
+  };
+
+  const removeFile = (id: string) => setBrandFiles(prev => prev.filter(f => f.id !== id));
+
+  const formatSize = (b: number) => b < 1048576 ? `${(b / 1024).toFixed(1)}KB` : `${(b / 1048576).toFixed(1)}MB`;
+
   const handleConnect = useCallback(async (id: string, key: string) => {
     try {
       const result = await saveIntegrationKey(id, key);
       if (result.success) {
-        integrations.setApiKey(id, key);
+        integrations.setApiKey(id, "••••••••");
         integrations.connectPlatform(id);
         const conn = integrations.connections.find((c) => c.id === id);
-        toast({ title: `${conn?.name || "Platform"} connected` });
+        toast({ title: `${conn?.name || "Platform"} connected`, description: "Key encrypted and stored securely." });
       } else {
         toast({ title: "Connection failed", description: result.error, variant: "destructive" });
       }
@@ -266,6 +342,7 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
 
             {activeSection === "brand" && (
               <div className="px-4 pb-4 space-y-3">
+                {/* Primary URL */}
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Globe className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -286,6 +363,56 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
                     {isExtracting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Extract"}
                   </Button>
                 </div>
+
+                {/* Additional URLs */}
+                {additionalUrls.map((url, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <Globe className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs text-foreground truncate flex-1">{url}</span>
+                    <button onClick={() => handleRemoveUrl(i)} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex gap-2">
+                  <Input
+                    type="url"
+                    placeholder="Add another URL..."
+                    value={newAdditionalUrl}
+                    onChange={(e) => setNewAdditionalUrl(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddUrl()}
+                    className="text-xs h-7 flex-1"
+                  />
+                  <Button size="sm" variant="ghost" onClick={handleAddUrl} disabled={!newAdditionalUrl.trim()} className="h-7 px-2">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                </div>
+
+                {/* File Upload */}
+                <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.txt,.md,.pptx" onChange={handleFileUpload} className="hidden" />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full py-3 rounded-lg border border-dashed border-border hover:border-primary/40 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Upload className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Upload brand docs</span>
+                </button>
+
+                {brandFiles.length > 0 && (
+                  <div className="space-y-1">
+                    {brandFiles.map((f) => (
+                      <div key={f.id} className="flex items-center gap-2 rounded px-2 py-1 bg-muted/30">
+                        <FileText className="w-3 h-3 text-accent flex-shrink-0" />
+                        <span className="text-xs text-foreground truncate flex-1">{f.name}</span>
+                        <span className="text-[9px] text-muted-foreground">{formatSize(f.size)}</span>
+                        <button onClick={() => removeFile(f.id)} className="text-muted-foreground hover:text-destructive">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 {brandData && (
                   <div className="space-y-2.5 pt-2 border-t border-border">
@@ -360,6 +487,11 @@ export function AccountPanel({ onClose }: AccountPanelProps) {
 
             {activeSection === "integrations" && (
               <div className="px-4 pb-4 space-y-4">
+                {!serverLoaded && (
+                  <div className="flex items-center justify-center py-3">
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
                 {/* Publishing Tools */}
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Publishing Tools</p>

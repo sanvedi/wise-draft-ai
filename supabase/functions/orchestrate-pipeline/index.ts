@@ -408,9 +408,28 @@ async function orchestrate(ctx: PipelineContext): Promise<any> {
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       errorLog.push({ step: currentStep, error: errMsg, timestamp: new Date().toISOString() });
+      console.error(`Step ${currentStep} failed fatally:`, errMsg);
+
+      // For non-critical steps, continue gracefully with what we have
+      if (currentStep === "customizer" || currentStep === "publisher" || currentStep === "learner") {
+        console.log(`Skipping failed step ${currentStep}, continuing with available data`);
+        ctx.checkpoints[currentStep] = { skipped: true, error: errMsg };
+        await updateRun(ctx.runId, { checkpoints: ctx.checkpoints, error_log: errorLog });
+        // Move to next logical step or end
+        if (currentStep === "customizer") { currentStep = "publisher"; continue; }
+        if (currentStep === "publisher") { currentStep = "learner"; continue; }
+        currentStep = null;
+        continue;
+      }
+
+      // Critical steps (drafter, reviewer) cause full failure
+      if (errMsg === "CREDITS_EXHAUSTED") {
+        await updateRun(ctx.runId, { status: "failed", error_log: errorLog, checkpoints: { ...ctx.checkpoints, _resumeFrom: currentStep } });
+        throw err;
+      }
 
       await updateRun(ctx.runId, {
-        status: errMsg === "CREDITS_EXHAUSTED" ? "failed" : "paused",
+        status: "paused",
         error_log: errorLog,
         checkpoints: { ...ctx.checkpoints, _resumeFrom: currentStep },
       });

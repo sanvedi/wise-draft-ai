@@ -28,8 +28,6 @@ export function BrandDNAEditor() {
   // New item inputs
   const [newGuideline, setNewGuideline] = useState("");
   const [newFont, setNewFont] = useState("");
-  const [newColorName, setNewColorName] = useState("");
-  const [newColorHex, setNewColorHex] = useState("#000000");
   const [newOffering, setNewOffering] = useState("");
 
   if (!brandData) return null;

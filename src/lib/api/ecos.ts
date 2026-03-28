@@ -104,9 +104,9 @@ export async function listIntegrations(): Promise<{ success: boolean; integratio
 }
 
 export const ecosApi = {
-  async extractBrandDNA(url: string): Promise<BrandDNAResult> {
+  async extractBrandDNA(url: string, additionalUrls?: string[]): Promise<BrandDNAResult> {
     const { data, error } = await supabase.functions.invoke("extract-brand-dna", {
-      body: { url },
+      body: { url, additionalUrls },
     });
 
     if (error) {

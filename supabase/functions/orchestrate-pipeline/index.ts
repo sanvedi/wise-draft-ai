@@ -55,8 +55,8 @@ async function updateRun(runId: string, updates: Record<string, any>) {
 // ── Per-agent model assignments (upgraded to latest same-cost-tier models) ──
 const AGENT_MODELS: Record<StepName, string> = {
   drafter: "google/gemini-3-flash-preview",       // Fast creative generation
-  reviewer: "openai/gpt-5-mini",                   // Deep brand compliance with reasoning
-  customizer: "google/gemini-3.1-pro-preview",     // Deep viral optimization
+  reviewer: "google/gemini-2.5-flash",             // Fast brand compliance check
+  customizer: "google/gemini-3-flash-preview",     // Fast viral optimization
   publisher: "google/gemini-3-flash-preview",      // Lightweight step
   learner: "google/gemini-3-flash-preview",        // Analytics summarization
 };
@@ -69,19 +69,27 @@ async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: S
   const body: any = { model, messages, stream: false };
   if (tools) { body.tools = tools; body.tool_choice = toolChoice; }
 
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55000); // 55s per call max
 
-  if (!res.ok) {
-    const errText = await res.text();
-    if (res.status === 429) throw new Error("RATE_LIMITED");
-    if (res.status === 402) throw new Error("CREDITS_EXHAUSTED");
-    throw new Error(`AI error [${res.status}]: ${errText}`);
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      if (res.status === 429) throw new Error("RATE_LIMITED");
+      if (res.status === 402) throw new Error("CREDITS_EXHAUSTED");
+      throw new Error(`AI error [${res.status}]: ${errText}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
   }
-  return res.json();
 }
 
 function buildBrandContext(brandDNA: any): string {

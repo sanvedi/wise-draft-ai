@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      brand_dna: {
+        Row: {
+          created_at: string
+          data: Json
+          id: string
+          source_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          id?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          id?: string
+          source_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       pipeline_runs: {
         Row: {
           brand_dna: Json | null

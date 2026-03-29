@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { Send, Eye, CheckCircle2, Loader2, Check } from "lucide-react";
+import { Copy, Eye, CheckCircle2, Loader2, Check } from "lucide-react";
 import { PlatformIcon } from "@/lib/platformIcons";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 
 export type PublishStatus = "idle" | "generating" | "preview" | "publishing" | "published" | "failed";
 
@@ -33,6 +34,17 @@ const statusLabels: Record<PublishStatus, { label: string; color: string }> = {
 
 const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) => {
   const { label, color } = statusLabels[data.status];
+  const { toast } = useToast();
+
+  const handleCopyContent = async () => {
+    if (!data.content) return;
+    try {
+      await navigator.clipboard.writeText(data.content);
+      toast({ title: "Copied!", description: `${data.platform} content copied to clipboard` });
+    } catch {
+      toast({ title: "Copy failed", variant: "destructive" });
+    }
+  };
 
   return (
     <motion.div
@@ -78,10 +90,10 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
             </Button>
             <Button
               size="sm"
-              onClick={() => onPublish(data.platform)}
+              onClick={handleCopyContent}
               className="flex-1 text-xs bg-primary text-primary-foreground rounded-lg"
             >
-              <Send className="w-3.5 h-3.5 mr-1.5" /> Publish
+              <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
             </Button>
           </>
         )}

@@ -56,7 +56,7 @@ async function updateRun(runId: string, updates: Record<string, any>) {
 const AGENT_MODELS: Record<StepName, string> = {
   drafter: "google/gemini-3-flash-preview",       // Fast creative generation
   reviewer: "google/gemini-2.5-flash",             // Fast brand compliance check
-  customizer: "google/gemini-3-flash-preview",     // Fast viral optimization
+  customizer: "google/gemini-3.1-pro-preview",      // Deep viral optimization
   publisher: "google/gemini-3-flash-preview",      // Lightweight step
   learner: "google/gemini-3-flash-preview",        // Analytics summarization
 };
@@ -277,26 +277,75 @@ async function runCustomizer(ctx: PipelineContext): Promise<StepResult> {
     [
       {
         role: "system",
-        content: `You are an elite viral content strategist and platform-native optimization specialist. Your job is to transform good content into SCROLL-STOPPING, SHARE-WORTHY content tailored to each platform's unique algorithm and culture.
+        content: `You are the world's #1 viral content strategist — your content has generated billions of impressions across social platforms. Your job is to COMPLETELY REWRITE content to be platform-native, algorithm-optimized, and engineered for maximum shareability.
 
-PLATFORM-SPECIFIC RULES you MUST follow:
-${Object.entries(platformSpecs).map(([p, s]) => `- ${p}: ${s.instruction} (max ${s.charLimit} chars)`).join("\n")}
+YOU MUST FOLLOW THESE PLATFORM-SPECIFIC FORMATS EXACTLY:
 
-OPTIMIZATION TECHNIQUES:
-- Use pattern interrupts, curiosity gaps, and psychological triggers
-- Adapt tone, formatting, and length to each platform's native style
-- Instagram: visual storytelling, line breaks, emojis, trending hashtags
-- X/Twitter: hot takes, punchy one-liners, threads for depth
-- LinkedIn: thought leadership hooks, short paragraphs, engagement questions
-- YouTube: curiosity-driven titles, keyword-rich descriptions, timestamps
-- Facebook: emotional storytelling, shareable narratives, clear CTAs
-- Google Business: local relevance, action-oriented, concise
+📸 INSTAGRAM (max 2200 chars):
+- First line MUST be a scroll-stopping hook (question, bold claim, or shocking stat)
+- Use line breaks every 1-2 sentences for readability
+- Strategic emoji placement (not random spam)
+- Include a strong CTA before hashtags ("Save this for later 🔖", "Tag someone who needs this")
+- 20-30 relevant hashtags (mix of trending, niche, and branded) — place AFTER main caption with 5 dots separator
+- Write in a conversational, authentic tone — NOT corporate
 
-Maintain brand compliance while maximizing virality.${brandContext}`,
+🐦 X/TWITTER (max 280 chars):
+- Lead with a controversial hot take, surprising stat, or counterintuitive insight
+- Use "thread hook" format if content is rich: end with "🧵👇" and create numbered follow-ups
+- No hashtags inline (1-2 max at end if any)
+- Write like a thought leader, not a brand — sharp, opinionated, punchy
+- If the content warrants it, format as a thread (1/, 2/, 3/...)
+
+💼 LINKEDIN (max 3000 chars):
+- Open with a BOLD personal/professional hook (1 short sentence, then line break)
+- Use single-sentence paragraphs with line breaks between each
+- Include a relatable story or anecdote  
+- End with a polarizing question that drives comments
+- NO emojis in body (maybe 1 at start). NO hashtags inline.
+- 3-5 hashtags at the very end
+- Tone: authoritative thought leader, NOT salesy
+
+📺 YOUTUBE (max 5000 chars):
+- Title: max 60 chars, curiosity-driven, includes power words ("SECRET", "NOBODY", "ACTUALLY")
+- Description: Hook paragraph → timestamps → detailed SEO description → links → hashtags
+- Include suggested tags and a compelling thumbnail text suggestion
+
+📘 FACEBOOK (max 63206 chars):
+- Lead with emotional storytelling — make people FEEL something
+- Use "pattern interrupt" formatting (unexpected line breaks, rhetorical questions mid-post)
+- Include a shareable insight or relatable moment
+- End with a clear sharing CTA ("Share this with someone who...")
+- 3-5 hashtags max
+
+📍 GOOGLE BUSINESS (max 1500 chars):
+- Hyper-local, action-oriented
+- Include specific offers, events, or updates
+- Clear CTA with urgency ("Visit us today", "Limited spots")
+- Professional but warm tone
+
+CRITICAL RULES:
+1. Each platform's content MUST feel like it was written BY a native creator of that platform
+2. NEVER copy-paste the same content across platforms — each must be unique
+3. Apply psychological triggers: curiosity gaps, social proof, urgency, exclusivity
+4. Content must pass the "would I stop scrolling for this?" test
+5. Maintain brand voice while adapting to platform culture
+${brandContext}`,
       },
       {
         role: "user",
-        content: `Optimize this content for MAXIMUM virality on each platform. Apply reviewer feedback and platform-specific best practices.\n\nOriginal content:\n${JSON.stringify(draftOutput.contents, null, 2)}\n\nReviewer feedback:\n${JSON.stringify(reviewOutput, null, 2)}\n\nFor each platform, rewrite the content to be truly platform-native and viral. Don't just tweak — transform it.`,
+        content: `TRANSFORM this draft content into VIRAL-READY, platform-native content. Do NOT just edit — COMPLETELY REWRITE each piece as if you're the top creator on that platform.
+
+DRAFT CONTENT:
+${JSON.stringify(draftOutput.contents, null, 2)}
+
+REVIEWER FEEDBACK (address ALL issues):
+${JSON.stringify(reviewOutput, null, 2)}
+
+For EACH platform, provide a complete rewrite that:
+1. Follows that platform's exact formatting norms
+2. Maximizes algorithm-friendly signals (engagement bait, save-worthy content, share triggers)
+3. Feels authentic to the platform's culture
+4. Addresses every piece of reviewer feedback`,
       },
     ],
     [customizeTool],

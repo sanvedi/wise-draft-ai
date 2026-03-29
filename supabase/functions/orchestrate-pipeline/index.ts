@@ -595,9 +595,24 @@ serve(async (req) => {
     const admin = getSupabaseAdmin();
     const targetPlatforms = platforms || Object.keys(platformSpecs);
 
+    // Fetch latest learnings to feed into the pipeline
+    let learningsContext = "";
+    try {
+      const { data: latestLearnings } = await supabaseAuth.from("content_learnings").select("insights").eq("user_id", userId).order("created_at", { ascending: false }).limit(1);
+      if (latestLearnings?.[0]?.insights) {
+        const ins = latestLearnings[0].insights;
+        const parts: string[] = [];
+        if (ins.contentPatterns?.length) parts.push(`Content patterns that work: ${ins.contentPatterns.join("; ")}`);
+        if (ins.optimalSchedule?.length) parts.push(`Best posting times: ${ins.optimalSchedule.join(", ")}`);
+        if (ins.improvements?.length) parts.push(`Areas to improve: ${ins.improvements.join("; ")}`);
+        if (ins.keyTakeaway) parts.push(`Key insight: ${ins.keyTakeaway}`);
+        if (parts.length) learningsContext = `\n\nPAST PERFORMANCE LEARNINGS (use these to optimize content):\n${parts.join("\n")}`;
+      }
+    } catch { /* non-fatal */ }
+
     const { data: run, error: insertError } = await admin.from("pipeline_runs").insert({
       user_id: userId,
-      prompt,
+      prompt: prompt + learningsContext,
       platforms: targetPlatforms,
       brand_dna: brandDNA || null,
       media_descriptions: mediaDescriptions || [],
@@ -609,7 +624,7 @@ serve(async (req) => {
     const ctx: PipelineContext = {
       runId: run.id,
       userId,
-      prompt,
+      prompt: prompt + learningsContext,
       platforms: targetPlatforms,
       brandDNA: brandDNA || null,
       mediaDescriptions: mediaDescriptions || [],

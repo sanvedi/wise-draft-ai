@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Copy, Eye, CheckCircle2, Loader2, Check } from "lucide-react";
+import { Copy, Eye, CheckCircle2, Loader2, Check, Send } from "lucide-react";
 import { PlatformIcon } from "@/lib/platformIcons";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";

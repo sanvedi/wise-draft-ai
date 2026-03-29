@@ -63,6 +63,26 @@ export async function getBufferPosts(
   return { success: true, posts: data.posts };
 }
 
+export async function analyzePostPerformance(
+  organizationId: string
+): Promise<{ success: boolean; analytics?: any; insights?: any; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("get-analytics", {
+    body: { action: "analyze", organizationId },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, analytics: data.analytics, insights: data.insights };
+}
+
+export async function getContentLearnings(): Promise<{ success: boolean; learnings?: any[]; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("get-analytics", {
+    body: { action: "get-learnings" },
+  });
+  if (error) return { success: false, error: error.message };
+  if (data?.error) return { success: false, error: data.error };
+  return { success: true, learnings: data.learnings };
+}
+
 export async function publishViaBuffer(
   contents: { platform: string; content: string }[],
   channelIds: string[]

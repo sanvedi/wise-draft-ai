@@ -91,15 +91,40 @@ const PlatformCard = ({ data, onPublish, onPreview, index }: PlatformCardProps) 
             <Button
               size="sm"
               onClick={handleCopyContent}
+              variant="outline"
+              className="text-xs border-border text-muted-foreground rounded-lg"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => onPublish(data.platform)}
               className="flex-1 text-xs bg-primary text-primary-foreground rounded-lg"
             >
-              <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
+              <Send className="w-3.5 h-3.5 mr-1.5" /> Publish
             </Button>
           </>
+        )}
+        {data.status === "publishing" && (
+          <div className="w-full text-center py-1.5">
+            <span className="text-xs text-muted-foreground flex items-center justify-center gap-1.5"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Publishing…</span>
+          </div>
         )}
         {data.status === "published" && (
           <div className="w-full text-center py-1.5">
             <span className="text-xs text-primary flex items-center justify-center gap-1.5"><Check className="w-3.5 h-3.5" /> Live</span>
+          </div>
+        )}
+        {data.status === "failed" && (
+          <div className="flex gap-2 w-full">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onPublish(data.platform)}
+              className="flex-1 text-xs border-destructive text-destructive rounded-lg"
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" /> Retry
+            </Button>
           </div>
         )}
       </div>

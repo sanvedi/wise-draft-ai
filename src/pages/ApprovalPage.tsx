@@ -34,23 +34,35 @@ const ApprovalPage = () => {
   }, [store, toast]);
 
   const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
-    if (store.selectedChannelIds.length === 0) {
-      toast({ title: "No Channels", description: "Load and select Buffer channels first", variant: "destructive" });
-      return;
-    }
     store.updateAgent("publisher", { status: "running" });
     store.setPreviewStatus("approved");
     const toPublish = store.platforms.filter((p) => p.status === "preview" && p.content).map((p) => ({ platform: p.platform, content: p.content! }));
-    const result = await publishViaBuffer(toPublish, store.selectedChannelIds);
-    if (result.success) {
-      for (const p of toPublish) store.updatePlatform(p.platform, { status: "published" });
-      store.updateAgent("publisher", { status: "complete", output: `Published ${toPublish.length} posts (${rating}★)` });
-      store.updateAgent("learner", { status: "running", output: "Analyzing post performance data..." });
-      setTimeout(() => store.updateAgent("learner", { status: "complete", output: "Performance baseline recorded for future optimization" }), 3000);
-      toast({ title: "All Published", description: `${toPublish.length} posts sent` });
+
+    // If Buffer channels are selected, publish via Buffer API
+    if (store.selectedChannelIds.length > 0) {
+      const result = await publishViaBuffer(toPublish, store.selectedChannelIds);
+      if (result.success) {
+        for (const p of toPublish) store.updatePlatform(p.platform, { status: "published" });
+        store.updateAgent("publisher", { status: "complete", output: `Published ${toPublish.length} posts via Buffer (${rating}★)` });
+        store.updateAgent("learner", { status: "running", output: "Analyzing post performance data..." });
+        setTimeout(() => store.updateAgent("learner", { status: "complete", output: "Performance baseline recorded for future optimization" }), 3000);
+        toast({ title: "All Published", description: `${toPublish.length} posts sent via Buffer` });
+      } else {
+        store.updateAgent("publisher", { status: "failed", output: result.error });
+        toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
+      }
     } else {
-      store.updateAgent("publisher", { status: "failed", output: result.error });
-      toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
+      // No Buffer channels — copy all content to clipboard as fallback
+      const allContent = toPublish.map((p) => `--- ${p.platform} ---\n${p.content}`).join("\n\n");
+      try {
+        await navigator.clipboard.writeText(allContent);
+        for (const p of toPublish) store.updatePlatform(p.platform, { status: "published" });
+        store.updateAgent("publisher", { status: "complete", output: `Approved & copied ${toPublish.length} posts (${rating}★)` });
+        toast({ title: "Content Approved & Copied", description: `${toPublish.length} posts copied to clipboard. Paste them on each platform.` });
+      } catch {
+        store.updateAgent("publisher", { status: "complete", output: `Approved ${toPublish.length} posts (${rating}★)` });
+        toast({ title: "Content Approved", description: `${toPublish.length} posts approved.` });
+      }
     }
   }, [store, toast]);
 

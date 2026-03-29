@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Globe, Upload, FileText, Check, Loader2, Palette, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -16,11 +16,16 @@ interface UploadedDoc {
 
 const BrandPage = () => {
   const { toast } = useToast();
-  const { brandData, fullBrandDNA, setBrandData, setFullBrandDNA } = useBrandStore();
+  const { brandData, fullBrandDNA, isLoading, setBrandData, setFullBrandDNA, saveBrandDNA, loadBrandDNA } = useBrandStore();
   const [url, setUrl] = useState("");
   const [isExtracting, setIsExtracting] = useState(false);
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Load saved brand DNA on mount
+  useEffect(() => {
+    if (!brandData) loadBrandDNA();
+  }, []);
 
   const handleExtract = useCallback(async () => {
     if (!url.trim()) return;
@@ -30,7 +35,9 @@ const BrandPage = () => {
       if (result.success && result.brandDNA) {
         setBrandData(result.brandDNA);
         setFullBrandDNA(result.brandDNA);
-        toast({ title: "Brand DNA Extracted", description: `Successfully analyzed ${url}` });
+        // Save to database
+        await saveBrandDNA(result.brandDNA, url);
+        toast({ title: "Brand DNA Extracted & Saved", description: `Successfully analyzed ${url}` });
       } else {
         toast({ title: "Extraction Failed", description: result.error || "Could not extract brand DNA", variant: "destructive" });
       }
@@ -39,7 +46,7 @@ const BrandPage = () => {
     } finally {
       setIsExtracting(false);
     }
-  }, [url, toast, setBrandData, setFullBrandDNA]);
+  }, [url, toast, setBrandData, setFullBrandDNA, saveBrandDNA]);
 
   const handleFileUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);

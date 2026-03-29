@@ -187,7 +187,7 @@ const ApprovalPage = () => {
           <div className="lg:col-span-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
-              <PublishAllButton store={store} toast={toast} />
+              <PublishAllButton />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               {store.platforms.map((p, i) => (

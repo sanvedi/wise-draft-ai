@@ -222,7 +222,7 @@ const ApprovalPage = () => {
 };
 
 // Publish All button component
-function PublishAllButton({ store, toast }: { store: ReturnType<typeof usePipelineStore>; toast: ReturnType<typeof useToast>["toast"] }) {
+function PublishAllButton({ store, toast }: { store: ReturnType<typeof usePipelineStore>; toast: any }) {
   const [publishing, setPublishing] = useState(false);
   const [allDone, setAllDone] = useState(false);
 

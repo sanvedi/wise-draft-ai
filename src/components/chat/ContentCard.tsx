@@ -178,14 +178,15 @@ export function ContentCard({
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={handlePostDirectly}
+                    onClick={handlePublishViaBuffer}
+                    disabled={publishing || published[current?.platform || ""]}
                     className="gap-1.5 text-xs h-7 px-2"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    Post
+                    {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : published[current?.platform || ""] ? <Check className="w-3.5 h-3.5 text-primary" /> : <Send className="w-3.5 h-3.5" />}
+                    {publishing ? "Publishing…" : published[current?.platform || ""] ? "Published" : "Publish"}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Open {current?.platform || "platform"} to post</TooltipContent>
+                <TooltipContent>Publish to {current?.platform || "platform"} via Buffer</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

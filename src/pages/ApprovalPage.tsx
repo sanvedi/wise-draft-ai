@@ -222,11 +222,13 @@ const ApprovalPage = () => {
 };
 
 // Publish All button component
-function PublishAllButton({ store, toast }: { store: ReturnType<typeof usePipelineStore>; toast: any }) {
+function PublishAllButton() {
   const [publishing, setPublishing] = useState(false);
   const [allDone, setAllDone] = useState(false);
+  const store = usePipelineStore();
+  const { toast } = useToast();
 
-  const toPublish = store.platforms.filter((p) => p.status === "preview" && p.content);
+  const toPublish = store.platforms.filter((p: any) => p.status === "preview" && p.content);
   if (toPublish.length === 0) return null;
 
   const handlePublishAll = async () => {

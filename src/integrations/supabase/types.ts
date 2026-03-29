@@ -41,6 +41,36 @@ export type Database = {
         }
         Relationships: []
       }
+      content_learnings: {
+        Row: {
+          analysis_data: Json
+          created_at: string
+          id: string
+          insights: Json
+          platforms_analyzed: string[]
+          post_count: number
+          user_id: string
+        }
+        Insert: {
+          analysis_data?: Json
+          created_at?: string
+          id?: string
+          insights?: Json
+          platforms_analyzed?: string[]
+          post_count?: number
+          user_id: string
+        }
+        Update: {
+          analysis_data?: Json
+          created_at?: string
+          id?: string
+          insights?: Json
+          platforms_analyzed?: string[]
+          post_count?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       pipeline_runs: {
         Row: {
           brand_dna: Json | null

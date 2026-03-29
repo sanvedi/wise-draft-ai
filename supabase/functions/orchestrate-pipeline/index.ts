@@ -338,8 +338,7 @@ async function runCustomizer(ctx: PipelineContext): Promise<StepResult> {
   const platformRules = ctx.platforms.map((platform) => {
     const spec = platformSpecs[platform];
     return `- ${platform}: ${spec?.instruction || "Rewrite it to feel native to the platform"} (max ${spec?.charLimit || 5000} chars)`;
-  }).join("
-");
+  }).join("\n");
 
   const brandContext = buildBrandContext(ctx.brandDNA);
   const aiData = await callAI(

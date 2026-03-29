@@ -86,7 +86,12 @@ async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: S
       if (res.status === 402) throw new Error("CREDITS_EXHAUSTED");
       throw new Error(`AI error [${res.status}]: ${errText}`);
     }
-    return res.json();
+    const text = await res.text();
+    try {
+      return JSON.parse(text);
+    } catch {
+      throw new Error(`AI returned non-JSON response: ${text.slice(0, 200)}`);
+    }
   } finally {
     clearTimeout(timeout);
   }

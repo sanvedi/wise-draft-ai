@@ -62,36 +62,49 @@ serve(async (req) => {
 
     for (const attempt of [1, 2]) {
       console.log(`Scrape attempt ${attempt} for:`, formattedUrl);
-      const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: formattedUrl,
-          formats: ["branding", "markdown"],
-          onlyMainContent: false,
-          timeout: 60000, // 60s timeout for slow sites
-          waitFor: attempt === 1 ? 3000 : 5000,
-        }),
-      });
-
-      scrapeData = await scrapeRes.json();
-      if (scrapeRes.ok) {
-        scrapeOk = true;
-        break;
-      }
-
-      if (scrapeRes.status === 402) {
-        return new Response(JSON.stringify({ error: "Firecrawl credits exhausted. Please top up your Firecrawl account." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      try {
+        const scrapeRes = await fetch("https://api.firecrawl.dev/v1/scrape", {
+          method: "POST",
+          headers: { "Authorization": `Bearer ${FIRECRAWL_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            url: formattedUrl,
+            formats: ["branding", "markdown"],
+            onlyMainContent: false,
+            timeout: 60000,
+            waitFor: attempt === 1 ? 3000 : 5000,
+          }),
         });
-      }
 
-      // On timeout (408), retry once with longer wait; otherwise break
-      if (scrapeRes.status !== 408 || attempt === 2) {
-        console.warn(`Scrape failed [${scrapeRes.status}] on attempt ${attempt}, continuing with partial data`);
-        break;
+        // Safely parse response — Firecrawl can return non-JSON (e.g. "Bad Gateway")
+        const scrapeText = await scrapeRes.text();
+        try {
+          scrapeData = JSON.parse(scrapeText);
+        } catch {
+          console.warn(`Scrape attempt ${attempt}: non-JSON response [${scrapeRes.status}]: ${scrapeText.slice(0, 200)}`);
+          if (attempt === 2) break;
+          continue;
+        }
+
+        if (scrapeRes.ok) {
+          scrapeOk = true;
+          break;
+        }
+
+        if (scrapeRes.status === 402) {
+          return new Response(JSON.stringify({ error: "Firecrawl credits exhausted. Please top up your Firecrawl account." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        if (scrapeRes.status !== 408 || attempt === 2) {
+          console.warn(`Scrape failed [${scrapeRes.status}] on attempt ${attempt}, continuing with partial data`);
+          break;
+        }
+        console.warn("Scrape timed out, retrying with longer wait...");
+      } catch (fetchErr) {
+        console.warn(`Scrape attempt ${attempt} network error:`, fetchErr);
+        if (attempt === 2) break;
       }
-      console.warn("Scrape timed out, retrying with longer wait...");
     }
 
     const branding = scrapeOk ? (scrapeData?.data?.branding || scrapeData?.branding || {}) : {};
@@ -115,9 +128,27 @@ serve(async (req) => {
     let socialMediaContent = "";
     const socialProfiles: Record<string, string> = {};
 
-    if (mapRes.ok) {
-      const mapData = await mapRes.json();
-      const siteLinks = mapData.links || mapData.data?.links || [];
+    let mapOk = false;
+    let siteLinks: string[] = [];
+    try {
+      if (mapRes.ok) {
+        const mapText = await mapRes.text();
+        try {
+          const mapData = JSON.parse(mapText);
+          siteLinks = mapData.links || mapData.data?.links || [];
+          mapOk = true;
+        } catch {
+          console.warn("Map response not valid JSON:", mapText.slice(0, 200));
+        }
+      } else {
+        const errText = await mapRes.text();
+        console.warn(`Map failed [${mapRes.status}]:`, errText.slice(0, 200));
+      }
+    } catch (mapErr) {
+      console.warn("Map network error:", mapErr);
+    }
+
+    if (mapOk) {
       console.log(`Found ${siteLinks.length} relevant pages`);
 
       // Detect social media profile links from the site
@@ -149,9 +180,14 @@ serve(async (req) => {
             body: JSON.stringify({ url: pageUrl, formats: ["markdown"], onlyMainContent: true }),
           });
           if (pageRes.ok) {
-            const pageData = await pageRes.json();
-            const pageMarkdown = pageData.data?.markdown || pageData.markdown || "";
-            additionalContent += `\n\n--- PAGE: ${pageUrl} ---\n${pageMarkdown.slice(0, 2000)}`;
+            const pageText = await pageRes.text();
+            try {
+              const pageData = JSON.parse(pageText);
+              const pageMarkdown = pageData.data?.markdown || pageData.markdown || "";
+              additionalContent += `\n\n--- PAGE: ${pageUrl} ---\n${pageMarkdown.slice(0, 2000)}`;
+            } catch {
+              console.warn("Page response not valid JSON for:", pageUrl);
+            }
           }
         } catch (e) {
           console.warn("Failed to scrape page:", pageUrl, e);
@@ -185,9 +221,17 @@ serve(async (req) => {
           body: JSON.stringify({ url: profileUrl, formats: ["markdown"], onlyMainContent: true, waitFor: 2000 }),
         });
         if (socialRes.ok) {
-          const socialData = await socialRes.json();
-          const socialMarkdown = socialData.data?.markdown || socialData.markdown || "";
-          socialMediaContent += `\n\n--- SOCIAL: ${platform.toUpperCase()} (${profileUrl}) ---\n${socialMarkdown.slice(0, 3000)}`;
+          const socialText = await socialRes.text();
+          try {
+            const socialData = JSON.parse(socialText);
+            const socialMarkdown = socialData.data?.markdown || socialData.markdown || "";
+            socialMediaContent += `\n\n--- SOCIAL: ${platform.toUpperCase()} (${profileUrl}) ---\n${socialMarkdown.slice(0, 3000)}`;
+          } catch {
+            console.warn(`Social scrape for ${platform} returned non-JSON`);
+          }
+        } else {
+          // Consume body to prevent resource leak
+          await socialRes.text();
         }
       } catch (e) {
         console.warn(`Failed to scrape ${platform}:`, e);

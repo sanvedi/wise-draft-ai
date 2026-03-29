@@ -33,9 +33,14 @@ const stepOrder = ["drafter", "reviewer", "customizer", "publisher", "learner"];
 const GeneratePage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { fullBrandDNA } = useBrandStore();
+  const { fullBrandDNA, loadBrandDNA } = useBrandStore();
   const store = usePipelineStore();
   const currentRunId = useRef<string | null>(null);
+
+  // Load saved brand DNA if not in memory
+  useEffect(() => {
+    if (!fullBrandDNA) loadBrandDNA();
+  }, []);
 
   // Real-time subscription to pipeline_runs for live agent status
   useEffect(() => {

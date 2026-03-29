@@ -61,16 +61,40 @@ const AGENT_MODELS: Record<StepName, string> = {
   learner: "google/gemini-3-flash-preview",        // Analytics summarization
 };
 
+const STEP_TIMEOUT_MS: Record<StepName, number> = {
+  drafter: 45000,
+  reviewer: 35000,
+  customizer: 90000,
+  publisher: 15000,
+  learner: 15000,
+};
+
+const STEP_MAX_ATTEMPTS: Record<StepName, number> = {
+  drafter: 3,
+  reviewer: 3,
+  customizer: 2,
+  publisher: 1,
+  learner: 1,
+};
+
+function isAbortError(error: unknown) {
+  return error instanceof Error && (
+    error.name === "AbortError" ||
+    error.message.includes("signal has been aborted")
+  );
+}
+
 async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: StepName) {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
   const model = step ? AGENT_MODELS[step] : "google/gemini-3-flash-preview";
+  const timeoutMs = step ? STEP_TIMEOUT_MS[step] : 45000;
   const body: any = { model, messages, stream: false };
   if (tools) { body.tools = tools; body.tool_choice = toolChoice; }
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000); // 55s per call max
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -86,12 +110,18 @@ async function callAI(messages: any[], tools?: any[], toolChoice?: any, step?: S
       if (res.status === 402) throw new Error("CREDITS_EXHAUSTED");
       throw new Error(`AI error [${res.status}]: ${errText}`);
     }
+
     const text = await res.text();
     try {
       return JSON.parse(text);
     } catch {
       throw new Error(`AI returned non-JSON response: ${text.slice(0, 200)}`);
     }
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error(`AI_TIMEOUT:${step ?? "unknown"}:${timeoutMs}`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -111,6 +141,32 @@ function buildBrandContext(brandDNA: any): string {
     ctx += `\n- Recommended Hashtags: ${brandDNA.hashtagStrategy.join(", ")}`;
   }
   return ctx;
+}
+
+function getCustomizerDraftSummary(draftContents: any[] = []) {
+  return draftContents.map((item) => ({
+    platform: item.platform,
+    content: typeof item.content === "string" ? item.content.slice(0, 1200) : "",
+    hashtags: Array.isArray(item.hashtags) ? item.hashtags.slice(0, 8) : [],
+    suggestedMediaPlacement: item.suggestedMediaPlacement || "",
+  }));
+}
+
+function getCustomizerReviewSummary(reviewOutput: any) {
+  return {
+    complianceScore: reviewOutput?.complianceScore ?? null,
+    reviewNotes: typeof reviewOutput?.reviewNotes === "string"
+      ? reviewOutput.reviewNotes.slice(0, 1200)
+      : "",
+    platformFeedback: Array.isArray(reviewOutput?.platformFeedback)
+      ? reviewOutput.platformFeedback.map((item: any) => ({
+          platform: item.platform,
+          score: item.score,
+          needsRevision: item.needsRevision,
+          feedback: typeof item.feedback === "string" ? item.feedback.slice(0, 400) : "",
+        }))
+      : [],
+  };
 }
 
 // ── Agent Steps ─────────────────────────────────────────────────────────
@@ -277,80 +333,46 @@ async function runCustomizer(ctx: PipelineContext): Promise<StepResult> {
     },
   };
 
+  const summarizedDraft = getCustomizerDraftSummary(draftOutput?.contents || []);
+  const summarizedReview = getCustomizerReviewSummary(reviewOutput);
+  const platformRules = ctx.platforms.map((platform) => {
+    const spec = platformSpecs[platform];
+    return `- ${platform}: ${spec?.instruction || "Rewrite it to feel native to the platform"} (max ${spec?.charLimit || 5000} chars)`;
+  }).join("\n");
+
   const brandContext = buildBrandContext(ctx.brandDNA);
   const aiData = await callAI(
     [
       {
         role: "system",
-        content: `You are the world's #1 viral content strategist — your content has generated billions of impressions across social platforms. Your job is to COMPLETELY REWRITE content to be platform-native, algorithm-optimized, and engineered for maximum shareability.
+        content: `You are an elite social content customizer. Rewrite every post so it feels native to its platform, highly engaging, and ready to publish.${brandContext}
 
-YOU MUST FOLLOW THESE PLATFORM-SPECIFIC FORMATS EXACTLY:
+PLATFORM RULES:
+- Instagram: start with a stop-scroll hook, use short readable lines, strategic emojis, a clear save/share CTA, then hashtags at the end.
+- X: be punchy and insight-led, use a thread only when the idea truly needs it, and avoid stuffing hashtags.
+- LinkedIn: open with a strong professional hook, use one-sentence paragraphs, end with a conversation-starting question, and keep hashtags only at the end.
+- YouTube: provide a curiosity-driven title plus a structured description with SEO-friendly context.
+- Facebook: use emotional storytelling, pattern interrupts, and a share-worthy CTA.
+- Google Business: keep it local, specific, action-oriented, and warm.
 
-📸 INSTAGRAM (max 2200 chars):
-- First line MUST be a scroll-stopping hook (question, bold claim, or shocking stat)
-- Use line breaks every 1-2 sentences for readability
-- Strategic emoji placement (not random spam)
-- Include a strong CTA before hashtags ("Save this for later 🔖", "Tag someone who needs this")
-- 20-30 relevant hashtags (mix of trending, niche, and branded) — place AFTER main caption with 5 dots separator
-- Write in a conversational, authentic tone — NOT corporate
-
-🐦 X/TWITTER (max 280 chars):
-- Lead with a controversial hot take, surprising stat, or counterintuitive insight
-- Use "thread hook" format if content is rich: end with "🧵👇" and create numbered follow-ups
-- No hashtags inline (1-2 max at end if any)
-- Write like a thought leader, not a brand — sharp, opinionated, punchy
-- If the content warrants it, format as a thread (1/, 2/, 3/...)
-
-💼 LINKEDIN (max 3000 chars):
-- Open with a BOLD personal/professional hook (1 short sentence, then line break)
-- Use single-sentence paragraphs with line breaks between each
-- Include a relatable story or anecdote  
-- End with a polarizing question that drives comments
-- NO emojis in body (maybe 1 at start). NO hashtags inline.
-- 3-5 hashtags at the very end
-- Tone: authoritative thought leader, NOT salesy
-
-📺 YOUTUBE (max 5000 chars):
-- Title: max 60 chars, curiosity-driven, includes power words ("SECRET", "NOBODY", "ACTUALLY")
-- Description: Hook paragraph → timestamps → detailed SEO description → links → hashtags
-- Include suggested tags and a compelling thumbnail text suggestion
-
-📘 FACEBOOK (max 63206 chars):
-- Lead with emotional storytelling — make people FEEL something
-- Use "pattern interrupt" formatting (unexpected line breaks, rhetorical questions mid-post)
-- Include a shareable insight or relatable moment
-- End with a clear sharing CTA ("Share this with someone who...")
-- 3-5 hashtags max
-
-📍 GOOGLE BUSINESS (max 1500 chars):
-- Hyper-local, action-oriented
-- Include specific offers, events, or updates
-- Clear CTA with urgency ("Visit us today", "Limited spots")
-- Professional but warm tone
-
-CRITICAL RULES:
-1. Each platform's content MUST feel like it was written BY a native creator of that platform
-2. NEVER copy-paste the same content across platforms — each must be unique
-3. Apply psychological triggers: curiosity gaps, social proof, urgency, exclusivity
-4. Content must pass the "would I stop scrolling for this?" test
-5. Maintain brand voice while adapting to platform culture
-${brandContext}`,
+CRITICAL:
+1. Keep each platform within its character limit.
+2. Do not reuse the same phrasing across platforms.
+3. Preserve the brand voice while improving hook strength, readability, shareability, and CTA clarity.
+4. Return polished final copy, not notes.`,
       },
       {
         role: "user",
-        content: `TRANSFORM this draft content into VIRAL-READY, platform-native content. Do NOT just edit — COMPLETELY REWRITE each piece as if you're the top creator on that platform.
+        content: `Rewrite these drafts using the review feedback below.
+
+PLATFORM REQUIREMENTS:
+${platformRules}
 
 DRAFT CONTENT:
-${JSON.stringify(draftOutput.contents, null, 2)}
+${JSON.stringify(summarizedDraft, null, 2)}
 
-REVIEWER FEEDBACK (address ALL issues):
-${JSON.stringify(reviewOutput, null, 2)}
-
-For EACH platform, provide a complete rewrite that:
-1. Follows that platform's exact formatting norms
-2. Maximizes algorithm-friendly signals (engagement bait, save-worthy content, share triggers)
-3. Feels authentic to the platform's culture
-4. Addresses every piece of reviewer feedback`,
+REVIEW FEEDBACK:
+${JSON.stringify(summarizedReview, null, 2)}`,
       },
     ],
     [customizeTool],
@@ -384,7 +406,7 @@ const STEP_HANDLERS: Record<StepName, (ctx: PipelineContext) => Promise<StepResu
 };
 
 // ── Retry wrapper ───────────────────────────────────────────────────────
-async function executeWithRetry(stepName: StepName, ctx: PipelineContext, maxAttempts = 3): Promise<StepResult> {
+async function executeWithRetry(stepName: StepName, ctx: PipelineContext, maxAttempts = STEP_MAX_ATTEMPTS[stepName]): Promise<StepResult> {
   let lastError: Error | null = null;
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
@@ -394,9 +416,9 @@ async function executeWithRetry(stepName: StepName, ctx: PipelineContext, maxAtt
       console.error(`Step ${stepName} attempt ${attempt}/${maxAttempts} failed:`, lastError.message);
 
       if (lastError.message === "RATE_LIMITED") {
-        await new Promise((r) => setTimeout(r, 2000 * attempt)); // exponential backoff
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
       } else if (lastError.message === "CREDITS_EXHAUSTED") {
-        throw lastError; // unrecoverable
+        throw lastError;
       } else if (attempt < maxAttempts) {
         await new Promise((r) => setTimeout(r, 1000 * attempt));
       }

@@ -7,8 +7,9 @@ import OutputPreview from "@/components/ecos/OutputPreview";
 import PlatformCard from "@/components/ecos/PlatformCard";
 import BufferConnect from "@/components/ecos/BufferConnect";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 // Map platform names to Buffer service identifiers
 const platformToService: Record<string, string[]> = {

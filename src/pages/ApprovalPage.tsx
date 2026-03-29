@@ -7,8 +7,9 @@ import OutputPreview from "@/components/ecos/OutputPreview";
 import PlatformCard from "@/components/ecos/PlatformCard";
 import BufferConnect from "@/components/ecos/BufferConnect";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 // Map platform names to Buffer service identifiers
 const platformToService: Record<string, string[]> = {
@@ -184,7 +185,10 @@ const ApprovalPage = () => {
 
           {/* Platform Cards */}
           <div className="lg:col-span-4 space-y-3">
-            <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
+              <PublishAllButton />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
               {store.platforms.map((p, i) => (
                 <PlatformCard
@@ -216,5 +220,90 @@ const ApprovalPage = () => {
     </div>
   );
 };
+
+// Publish All button component
+function PublishAllButton() {
+  const [publishing, setPublishing] = useState(false);
+  const [allDone, setAllDone] = useState(false);
+  const store = usePipelineStore();
+  const { toast } = useToast();
+
+  const toPublish = store.platforms.filter((p: any) => p.status === "preview" && p.content);
+  if (toPublish.length === 0) return null;
+
+  const handlePublishAll = async () => {
+    setPublishing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    // Auto-load channels if needed
+    let channels = store.bufferChannels;
+    if (channels.length === 0) {
+      try {
+        const orgResult = await getBufferOrganizations();
+        if (orgResult.success && orgResult.organizations?.length) {
+          const orgId = orgResult.organizations[0].id;
+          store.setBufferOrgId(orgId);
+          const channelResult = await getBufferChannels(orgId);
+          if (channelResult.success) {
+            channels = (channelResult.channels || []).filter((c: any) => !c.isLocked);
+            store.setBufferChannels(channels);
+            store.setSelectedChannelIds(channels.map((c: any) => c.id));
+          }
+        }
+      } catch { /* silent */ }
+    }
+
+    if (channels.length === 0) {
+      // Clipboard fallback
+      const allContent = toPublish.map((p) => `--- ${p.platform} ---\n${p.content}`).join("\n\n");
+      try {
+        await navigator.clipboard.writeText(allContent);
+        for (const p of toPublish) store.updatePlatform(p.platform, { status: "published" });
+        toast({ title: "Content Copied", description: `${toPublish.length} posts copied to clipboard (no Buffer channels found).` });
+      } catch {
+        toast({ title: "No Buffer Channels", description: "Connect Buffer in Integrations to publish.", variant: "destructive" });
+      }
+      setPublishing(false);
+      return;
+    }
+
+    for (const p of toPublish) {
+      const channelId = findChannelForPlatform(p.platform, channels);
+      const targetIds = channelId ? [channelId] : store.selectedChannelIds;
+      if (targetIds.length === 0) { failCount++; continue; }
+
+      store.updatePlatform(p.platform, { status: "publishing" as any });
+      const result = await publishViaBuffer([{ platform: p.platform, content: p.content! }], targetIds);
+      if (result.success) {
+        store.updatePlatform(p.platform, { status: "published" });
+        successCount++;
+      } else {
+        store.updatePlatform(p.platform, { status: "failed" });
+        failCount++;
+      }
+    }
+
+    if (failCount === 0) {
+      setAllDone(true);
+      toast({ title: "All Published!", description: `${successCount} posts sent via Buffer` });
+    } else {
+      toast({ title: "Partially Published", description: `${successCount} succeeded, ${failCount} failed`, variant: "destructive" });
+    }
+    setPublishing(false);
+  };
+
+  return (
+    <Button
+      size="sm"
+      onClick={handlePublishAll}
+      disabled={publishing || allDone}
+      className="gap-1.5 text-xs"
+    >
+      {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : allDone ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+      {publishing ? "Publishing…" : allDone ? "All Published" : `Publish All (${toPublish.length})`}
+    </Button>
+  );
+}
 
 export default ApprovalPage;

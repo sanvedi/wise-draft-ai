@@ -1,13 +1,28 @@
 import { motion } from "framer-motion";
 import { ThumbsUp, ThumbsDown, RotateCcw, FileText, Presentation, BookOpen, Newspaper, Image, Video, Loader2, Eye, EyeOff, Copy, Send, Check, Cpu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import type { GeneratedPlatformContent } from "@/lib/store/chatStore";
 import { getPlatformIcon } from "@/lib/platformIcons";
 import { PlatformPreview } from "./PlatformPreview";
 import { useBrandStore } from "@/lib/store/brandStore";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { publishViaBuffer, getBufferOrganizations, getBufferChannels } from "@/lib/api/ecos";
+
+const platformToService: Record<string, string[]> = {
+  "Instagram": ["instagram"],
+  "YouTube": ["youtube"],
+  "X": ["twitter"],
+  "LinkedIn": ["linkedin"],
+  "Facebook": ["facebook"],
+  "Google Business": ["googlebusiness", "google"],
+  "Pinterest": ["pinterest"],
+  "TikTok": ["tiktok"],
+  "Threads": ["threads"],
+  "Bluesky": ["bluesky"],
+  "Mastodon": ["mastodon"],
+};
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];
@@ -53,28 +68,63 @@ export function ContentCard({
     }
   };
 
-  const handlePostDirectly = () => {
+  const [publishing, setPublishing] = useState(false);
+  const [published, setPublished] = useState<Record<string, boolean>>({});
+
+  const handlePublishViaBuffer = useCallback(async () => {
+    const platform = current?.platform || "";
     const text = current?.content || "";
     const hashtags = current?.hashtags?.join(" ") || "";
-    const fullText = encodeURIComponent(hashtags ? `${text}\n\n${hashtags}` : text);
-    const platform = current?.platform?.toLowerCase() || "";
+    const fullText = hashtags ? `${text}\n\n${hashtags}` : text;
 
-    let url = "";
-    if (platform.includes("twitter") || platform.includes("x")) {
-      url = `https://twitter.com/intent/tweet?text=${fullText}`;
-    } else if (platform.includes("linkedin")) {
-      url = `https://www.linkedin.com/sharing/share-offsite/?url=&summary=${fullText}`;
-    } else if (platform.includes("facebook")) {
-      url = `https://www.facebook.com/sharer/sharer.php?quote=${fullText}`;
-    } else {
-      // Fallback: copy and notify
-      handleCopy();
-      toast({ title: "Platform not supported for direct posting", description: "Content has been copied instead." });
-      return;
+    if (!fullText.trim()) return;
+
+    setPublishing(true);
+    try {
+      // Get Buffer channels
+      const orgResult = await getBufferOrganizations();
+      if (!orgResult.success || !orgResult.organizations?.length) {
+        toast({ title: "Buffer Not Connected", description: "Connect Buffer in Integrations to publish directly.", variant: "destructive" });
+        setPublishing(false);
+        return;
+      }
+      const orgId = orgResult.organizations[0].id;
+      const channelResult = await getBufferChannels(orgId);
+      if (!channelResult.success || !channelResult.channels?.length) {
+        toast({ title: "No Channels Found", description: "No active Buffer channels available.", variant: "destructive" });
+        setPublishing(false);
+        return;
+      }
+      const activeChannels = (channelResult.channels || []).filter((c: any) => !c.isLocked);
+
+      // Find matching channel for this platform
+      const services = platformToService[platform];
+      const matchedChannel = services
+        ? activeChannels.find((ch: any) => services.includes(ch.service?.toLowerCase()))
+        : undefined;
+
+      const targetIds = matchedChannel ? [matchedChannel.id] : activeChannels.map((c: any) => c.id).slice(0, 1);
+
+      if (targetIds.length === 0) {
+        toast({ title: "No Matching Channel", description: `No Buffer channel for ${platform}. Content copied instead.`, variant: "destructive" });
+        handleCopy();
+        setPublishing(false);
+        return;
+      }
+
+      const result = await publishViaBuffer([{ platform, content: fullText }], targetIds);
+      if (result.success) {
+        setPublished((prev) => ({ ...prev, [platform]: true }));
+        toast({ title: "Published!", description: `${platform} content sent via Buffer` });
+      } else {
+        toast({ title: "Publish Failed", description: result.error || "Unknown error", variant: "destructive" });
+      }
+    } catch (e) {
+      toast({ title: "Publish Error", description: e instanceof Error ? e.message : "Unknown error", variant: "destructive" });
+    } finally {
+      setPublishing(false);
     }
-
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+  }, [current, toast, handleCopy]);
 
   return (
     <motion.div
@@ -128,14 +178,15 @@ export function ContentCard({
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={handlePostDirectly}
+                    onClick={handlePublishViaBuffer}
+                    disabled={publishing || published[current?.platform || ""]}
                     className="gap-1.5 text-xs h-7 px-2"
                   >
-                    <Send className="w-3.5 h-3.5" />
-                    Post
+                    {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : published[current?.platform || ""] ? <Check className="w-3.5 h-3.5 text-primary" /> : <Send className="w-3.5 h-3.5" />}
+                    {publishing ? "Publishing…" : published[current?.platform || ""] ? "Published" : "Publish"}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Open {current?.platform || "platform"} to post</TooltipContent>
+                <TooltipContent>Publish to {current?.platform || "platform"} via Buffer</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>

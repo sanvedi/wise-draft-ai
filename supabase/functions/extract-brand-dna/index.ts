@@ -221,9 +221,17 @@ serve(async (req) => {
           body: JSON.stringify({ url: profileUrl, formats: ["markdown"], onlyMainContent: true, waitFor: 2000 }),
         });
         if (socialRes.ok) {
-          const socialData = await socialRes.json();
-          const socialMarkdown = socialData.data?.markdown || socialData.markdown || "";
-          socialMediaContent += `\n\n--- SOCIAL: ${platform.toUpperCase()} (${profileUrl}) ---\n${socialMarkdown.slice(0, 3000)}`;
+          const socialText = await socialRes.text();
+          try {
+            const socialData = JSON.parse(socialText);
+            const socialMarkdown = socialData.data?.markdown || socialData.markdown || "";
+            socialMediaContent += `\n\n--- SOCIAL: ${platform.toUpperCase()} (${profileUrl}) ---\n${socialMarkdown.slice(0, 3000)}`;
+          } catch {
+            console.warn(`Social scrape for ${platform} returned non-JSON`);
+          }
+        } else {
+          // Consume body to prevent resource leak
+          await socialRes.text();
         }
       } catch (e) {
         console.warn(`Failed to scrape ${platform}:`, e);

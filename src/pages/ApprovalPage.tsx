@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { publishViaBuffer, getBufferOrganizations, getBufferChannels } from "@/lib/api/ecos";
@@ -9,29 +9,7 @@ import BufferConnect from "@/components/ecos/BufferConnect";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-
-// Map platform names to Buffer service identifiers
-const platformToService: Record<string, string[]> = {
-  "Instagram": ["instagram"],
-  "YouTube": ["youtube"],
-  "X": ["twitter"],
-  "LinkedIn": ["linkedin"],
-  "Facebook": ["facebook"],
-  "Google Business": ["googlebusiness", "google"],
-  "Pinterest": ["pinterest"],
-  "TikTok": ["tiktok"],
-  "Threads": ["threads"],
-  "Bluesky": ["bluesky"],
-  "Mastodon": ["mastodon"],
-};
-
-function findChannelForPlatform(platform: string, channels: { id: string; service: string }[]): string | undefined {
-  const services = platformToService[platform];
-  if (!services) return undefined;
-  const match = channels.find((ch) => services.includes(ch.service?.toLowerCase()));
-  return match?.id;
-}
+import { buildPublishText, getMatchingBufferChannelIds } from "@/lib/buffer";
 
 const ApprovalPage = () => {
   const { toast } = useToast();
@@ -39,125 +17,138 @@ const ApprovalPage = () => {
   const navigate = useNavigate();
   const autoLoaded = useRef(false);
 
-  // Auto-fetch Buffer channels on mount if not already loaded
+  const ensureChannelsLoaded = useCallback(async () => {
+    if (store.bufferChannels.length > 0) return store.bufferChannels;
+
+    const orgResult = await getBufferOrganizations();
+    if (!orgResult.success || !orgResult.organizations?.length) {
+      throw new Error(orgResult.error || "Buffer is not connected.");
+    }
+
+    const orgId = orgResult.organizations[0].id;
+    store.setBufferOrgId(orgId);
+    const channelResult = await getBufferChannels(orgId);
+    if (!channelResult.success) {
+      throw new Error(channelResult.error || "Could not load Buffer channels.");
+    }
+
+    const activeChannels = (channelResult.channels || []).filter((channel: any) => !channel.isLocked);
+    store.setBufferChannels(activeChannels);
+    if (store.selectedChannelIds.length === 0) {
+      store.setSelectedChannelIds(activeChannels.map((channel: any) => channel.id));
+    }
+
+    return activeChannels;
+  }, [store]);
+
   useEffect(() => {
     if (autoLoaded.current || store.bufferChannels.length > 0) return;
     autoLoaded.current = true;
 
-    (async () => {
-      try {
-        const orgResult = await getBufferOrganizations();
-        if (!orgResult.success || !orgResult.organizations?.length) return;
-        const orgId = orgResult.organizations[0].id;
-        store.setBufferOrgId(orgId);
-        const channelResult = await getBufferChannels(orgId);
-        if (!channelResult.success) return;
-        const activeChannels = (channelResult.channels || []).filter((c: any) => !c.isLocked);
-        store.setBufferChannels(activeChannels);
-        // Auto-select all channels
-        store.setSelectedChannelIds(activeChannels.map((c: any) => c.id));
-      } catch {
-        // Silent — user can still manually load via BufferConnect
-      }
-    })();
-  }, []);
+    ensureChannelsLoaded().catch(() => undefined);
+  }, [ensureChannelsLoaded, store.bufferChannels.length]);
 
-  // Publish a single platform's content to its matching Buffer channel
-  const handlePublish = useCallback(async (platform: string) => {
-    const pd = store.platforms.find((p) => p.platform === platform);
-    if (!pd?.content) return;
-
-    // Find the matching channel for this platform
-    const channelId = findChannelForPlatform(platform, store.bufferChannels);
-    if (!channelId) {
-      // Fall back to selected channels, or show error
-      if (store.selectedChannelIds.length === 0) {
-        toast({ title: "No Matching Channel", description: `No Buffer channel found for ${platform}. Load channels and select one.`, variant: "destructive" });
-        return;
-      }
-    }
-
-    const targetChannelIds = channelId ? [channelId] : store.selectedChannelIds;
-
-    store.updatePlatform(platform, { status: "publishing" as any });
-    const result = await publishViaBuffer([{ platform, content: pd.content }], targetChannelIds);
-    if (result.success) {
-      store.updatePlatform(platform, { status: "published" });
-      toast({ title: "Published!", description: `${platform} content sent via Buffer` });
-    } else {
-      store.updatePlatform(platform, { status: "failed" });
-      toast({ title: "Publish Failed", description: result.error, variant: "destructive" });
-    }
-  }, [store, toast]);
-
-  const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
-    store.updateAgent("publisher", { status: "running" });
-    store.setPreviewStatus("approved");
-    const toPublish = store.platforms.filter((p) => p.status === "preview" && p.content);
-
-    if (store.bufferChannels.length === 0) {
-      // No channels loaded — copy to clipboard as fallback
-      const allContent = toPublish.map((p) => `--- ${p.platform} ---\n${p.content}`).join("\n\n");
-      try {
-        await navigator.clipboard.writeText(allContent);
-        for (const p of toPublish) store.updatePlatform(p.platform, { status: "published" });
-        store.updateAgent("publisher", { status: "complete", output: `Approved & copied ${toPublish.length} posts (${rating}★)` });
-        toast({ title: "Content Approved & Copied", description: `${toPublish.length} posts copied to clipboard.` });
-      } catch {
-        store.updateAgent("publisher", { status: "complete", output: `Approved ${toPublish.length} posts (${rating}★)` });
-        toast({ title: "Content Approved", description: `${toPublish.length} posts approved.` });
-      }
-      return;
-    }
-
-    // Publish each platform to its matching Buffer channel
+  const publishPlatforms = useCallback(async (platformsToPublish: typeof store.platforms) => {
+    const channels = await ensureChannelsLoaded();
     let successCount = 0;
     let failCount = 0;
 
-    for (const p of toPublish) {
-      const channelId = findChannelForPlatform(p.platform, store.bufferChannels);
-      const targetIds = channelId ? [channelId] : store.selectedChannelIds;
-      if (targetIds.length === 0) {
-        store.updatePlatform(p.platform, { status: "failed" });
-        failCount++;
+    for (const platformData of platformsToPublish) {
+      const targetIds = getMatchingBufferChannelIds(platformData.platform, channels, store.selectedChannelIds);
+      if (!targetIds.length || !platformData.content) {
+        store.updatePlatform(platformData.platform, { status: "failed" });
+        failCount += 1;
         continue;
       }
 
-      store.updatePlatform(p.platform, { status: "publishing" as any });
-      const result = await publishViaBuffer([{ platform: p.platform, content: p.content! }], targetIds);
+      store.updatePlatform(platformData.platform, { status: "publishing" as const });
+      const result = await publishViaBuffer([
+        {
+          platform: platformData.platform,
+          content: buildPublishText(platformData.content),
+        },
+      ], targetIds);
+
       if (result.success) {
-        store.updatePlatform(p.platform, { status: "published" });
-        successCount++;
+        store.updatePlatform(platformData.platform, { status: "published" });
+        successCount += 1;
       } else {
-        store.updatePlatform(p.platform, { status: "failed" });
-        failCount++;
+        store.updatePlatform(platformData.platform, { status: "failed" });
+        failCount += 1;
       }
     }
 
-    if (failCount === 0) {
-      store.updateAgent("publisher", { status: "complete", output: `Published ${successCount} posts via Buffer (${rating}★)` });
-      store.updateAgent("learner", { status: "running", output: "Analyzing post performance data..." });
-      setTimeout(() => store.updateAgent("learner", { status: "complete", output: "Performance baseline recorded" }), 3000);
-      toast({ title: "All Published!", description: `${successCount} posts sent via Buffer` });
-    } else {
-      store.updateAgent("publisher", { status: "complete", output: `${successCount} published, ${failCount} failed` });
-      toast({ title: "Partially Published", description: `${successCount} succeeded, ${failCount} failed`, variant: "destructive" });
+    return { successCount, failCount };
+  }, [ensureChannelsLoaded, store]);
+
+  const handlePublish = useCallback(async (platform: string) => {
+    const platformData = store.platforms.find((item) => item.platform === platform && item.content);
+    if (!platformData) return;
+
+    try {
+      const { successCount } = await publishPlatforms([platformData]);
+      if (successCount > 0) {
+        toast({ title: "Published", description: `${platform} is live via Buffer.` });
+      } else {
+        toast({ title: "Publish Failed", description: `No selected Buffer channel matched ${platform}.`, variant: "destructive" });
+      }
+    } catch (error) {
+      toast({
+        title: "Publish Failed",
+        description: error instanceof Error ? error.message : "Could not publish via Buffer.",
+        variant: "destructive",
+      });
+      store.updatePlatform(platform, { status: "failed" });
     }
-  }, [store, toast]);
+  }, [publishPlatforms, store, toast]);
+
+  const handlePublishAll = useCallback(async (rating: number, feedback: string) => {
+    const readyPlatforms = store.platforms.filter((platform) => platform.status === "preview" && platform.content);
+    if (readyPlatforms.length === 0) return;
+
+    store.updateAgent("publisher", { status: "running" });
+    store.setPreviewStatus("approved");
+
+    try {
+      const { successCount, failCount } = await publishPlatforms(readyPlatforms);
+
+      if (failCount === 0) {
+        store.updateAgent("publisher", { status: "complete", output: `Published ${successCount} posts via Buffer (${rating}★)` });
+        store.updateAgent("learner", { status: "running", output: "Analyzing post performance data..." });
+        setTimeout(() => store.updateAgent("learner", { status: "complete", output: feedback || "Performance baseline recorded" }), 2000);
+        toast({ title: "All Published", description: `${successCount} posts were sent via Buffer.` });
+        return;
+      }
+
+      store.setPreviewStatus("review");
+      store.updateAgent("publisher", { status: "complete", output: `${successCount} published, ${failCount} failed` });
+      toast({ title: "Partially Published", description: `${successCount} succeeded and ${failCount} failed.`, variant: "destructive" });
+    } catch (error) {
+      store.setPreviewStatus("review");
+      store.updateAgent("publisher", { status: "failed", output: error instanceof Error ? error.message : "Publish failed" });
+      toast({
+        title: "Publish Failed",
+        description: error instanceof Error ? error.message : "Could not publish via Buffer.",
+        variant: "destructive",
+      });
+    }
+  }, [publishPlatforms, store, toast]);
 
   const handleReject = useCallback(() => {
     store.setPreviewStatus("generating");
     store.updateAgent("customizer", { status: "running" });
     store.updateAgent("publisher", { status: "idle" });
-    store.setPlatforms(store.platforms.map((p) => ({ ...p, status: "generating" as any })));
+    store.setPlatforms(store.platforms.map((platform) => ({ ...platform, status: "generating" as const })));
+
     setTimeout(() => {
       store.updateAgent("customizer", { status: "complete", output: "Revised per human feedback" });
-      store.setPlatforms(store.platforms.map((p) => ({ ...p, status: "preview" as any })));
+      store.setPlatforms(store.platforms.map((platform) => ({ ...platform, status: "preview" as const })));
       store.setPreviewStatus("review");
     }, 2000);
   }, [store]);
 
-  const hasContent = store.platforms.some((p) => p.content);
+  const hasContent = store.platforms.some((platform) => platform.content);
+  const readyCount = store.platforms.filter((platform) => platform.status === "preview" && platform.content).length;
 
   return (
     <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-6xl mx-auto space-y-6">
@@ -172,7 +163,6 @@ const ApprovalPage = () => {
 
       {hasContent && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Preview + Approval */}
           <div className="lg:col-span-5">
             <OutputPreview
               content={store.previewContent}
@@ -183,33 +173,31 @@ const ApprovalPage = () => {
             />
           </div>
 
-          {/* Platform Cards */}
           <div className="lg:col-span-4 space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono text-muted-foreground uppercase tracking-wider">Platform Distribution</h3>
-              <PublishAllButton />
+              <PublishAllButton count={readyCount} onPublishAll={() => handlePublishAll(5, "Bulk publish")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
-              {store.platforms.map((p, i) => (
+              {store.platforms.map((platform, index) => (
                 <PlatformCard
-                  key={p.platform}
-                  data={p}
+                  key={platform.platform}
+                  data={platform}
                   onPublish={handlePublish}
-                  onPreview={() => store.setPreviewContent(p.content || null)}
-                  index={i}
+                  onPreview={() => store.setPreviewContent(platform.content || null)}
+                  index={index}
                 />
               ))}
             </div>
           </div>
 
-          {/* Buffer */}
           <div className="lg:col-span-3">
             <BufferConnect
               channels={store.bufferChannels}
               selectedChannelIds={store.selectedChannelIds}
-              onChannelsLoaded={(ch) => {
-                store.setBufferChannels(ch);
-                store.setSelectedChannelIds(ch.map((c) => c.id));
+              onChannelsLoaded={(channels) => {
+                store.setBufferChannels(channels);
+                store.setSelectedChannelIds(channels.map((channel) => channel.id));
               }}
               onSelectionChange={store.setSelectedChannelIds}
               onOrgIdLoaded={store.setBufferOrgId}
@@ -221,87 +209,26 @@ const ApprovalPage = () => {
   );
 };
 
-// Publish All button component
-function PublishAllButton() {
+function PublishAllButton({ count, onPublishAll }: { count: number; onPublishAll: () => Promise<void> }) {
   const [publishing, setPublishing] = useState(false);
   const [allDone, setAllDone] = useState(false);
-  const store = usePipelineStore();
-  const { toast } = useToast();
 
-  const toPublish = store.platforms.filter((p: any) => p.status === "preview" && p.content);
-  if (toPublish.length === 0) return null;
+  if (count === 0) return null;
 
-  const handlePublishAll = async () => {
+  const handleClick = async () => {
     setPublishing(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    // Auto-load channels if needed
-    let channels = store.bufferChannels;
-    if (channels.length === 0) {
-      try {
-        const orgResult = await getBufferOrganizations();
-        if (orgResult.success && orgResult.organizations?.length) {
-          const orgId = orgResult.organizations[0].id;
-          store.setBufferOrgId(orgId);
-          const channelResult = await getBufferChannels(orgId);
-          if (channelResult.success) {
-            channels = (channelResult.channels || []).filter((c: any) => !c.isLocked);
-            store.setBufferChannels(channels);
-            store.setSelectedChannelIds(channels.map((c: any) => c.id));
-          }
-        }
-      } catch { /* silent */ }
-    }
-
-    if (channels.length === 0) {
-      // Clipboard fallback
-      const allContent = toPublish.map((p) => `--- ${p.platform} ---\n${p.content}`).join("\n\n");
-      try {
-        await navigator.clipboard.writeText(allContent);
-        for (const p of toPublish) store.updatePlatform(p.platform, { status: "published" });
-        toast({ title: "Content Copied", description: `${toPublish.length} posts copied to clipboard (no Buffer channels found).` });
-      } catch {
-        toast({ title: "No Buffer Channels", description: "Connect Buffer in Integrations to publish.", variant: "destructive" });
-      }
-      setPublishing(false);
-      return;
-    }
-
-    for (const p of toPublish) {
-      const channelId = findChannelForPlatform(p.platform, channels);
-      const targetIds = channelId ? [channelId] : store.selectedChannelIds;
-      if (targetIds.length === 0) { failCount++; continue; }
-
-      store.updatePlatform(p.platform, { status: "publishing" as any });
-      const result = await publishViaBuffer([{ platform: p.platform, content: p.content! }], targetIds);
-      if (result.success) {
-        store.updatePlatform(p.platform, { status: "published" });
-        successCount++;
-      } else {
-        store.updatePlatform(p.platform, { status: "failed" });
-        failCount++;
-      }
-    }
-
-    if (failCount === 0) {
+    try {
+      await onPublishAll();
       setAllDone(true);
-      toast({ title: "All Published!", description: `${successCount} posts sent via Buffer` });
-    } else {
-      toast({ title: "Partially Published", description: `${successCount} succeeded, ${failCount} failed`, variant: "destructive" });
+    } finally {
+      setPublishing(false);
     }
-    setPublishing(false);
   };
 
   return (
-    <Button
-      size="sm"
-      onClick={handlePublishAll}
-      disabled={publishing || allDone}
-      className="gap-1.5 text-xs"
-    >
+    <Button size="sm" onClick={handleClick} disabled={publishing || allDone} className="gap-1.5 text-xs">
       {publishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : allDone ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
-      {publishing ? "Publishing…" : allDone ? "All Published" : `Publish All (${toPublish.length})`}
+      {publishing ? "Publishing…" : allDone ? "All Published" : `Publish All (${count})`}
     </Button>
   );
 }

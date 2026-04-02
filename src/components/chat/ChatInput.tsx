@@ -37,7 +37,7 @@ export function ChatInput({ onSend, disabled, brandWebsite, onBrandLoad }: ChatI
   };
 
   const handleSend = useCallback(() => {
-    if (!prompt.trim() || disabled) return;
+    if (!prompt.trim() || disabled || selectedPlatforms.length === 0) return;
     onSend(prompt.trim(), selectedPlatforms, files);
     setPrompt("");
     setFiles([]);

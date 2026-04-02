@@ -162,8 +162,8 @@ export const useIntegrationsStore = create<IntegrationsStore>()(
       getConnected: () => get().connections.filter((c) => c.isConnected),
     }),
     {
-      name: "alchemist-integrations",
-      version: 2,
+      name: "content-flow-integrations",
+      version: 3,
     }
   )
 );

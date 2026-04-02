@@ -92,7 +92,22 @@ export async function publishViaBuffer(
   });
   if (error) return { success: false, error: error.message };
   if (data?.error) return { success: false, error: data.error };
-  return { success: true, results: data.results };
+
+  const results = Array.isArray(data?.results) ? data.results : [];
+  const failedResults = results.filter((result: any) => !result?.success);
+
+  if (failedResults.length > 0) {
+    const successCount = results.length - failedResults.length;
+    const errorSummary = [...new Set(failedResults.map((result: any) => result?.error).filter(Boolean))].join(" | ");
+
+    return {
+      success: false,
+      results,
+      error: errorSummary || `${successCount} succeeded and ${failedResults.length} failed during publishing.`,
+    };
+  }
+
+  return { success: true, results };
 }
 
 // Manage integrations server-side

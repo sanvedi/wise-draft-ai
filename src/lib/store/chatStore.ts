@@ -7,7 +7,7 @@ export interface ChatMessage {
   platforms?: string[];
   generatedContent?: GeneratedPlatformContent[];
   status?: "sending" | "generating" | "complete" | "error";
-  approval?: "approved" | "rejected" | null;
+  approval?: "approved" | "rejected" | "publishing" | null;
   timestamp: Date;
   brandApplied?: boolean;
   generatedMedia?: Record<string, { imageUrl?: string; videoUrl?: string }>;

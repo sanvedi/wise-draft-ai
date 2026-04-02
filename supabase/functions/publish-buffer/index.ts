@@ -258,7 +258,15 @@ serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ success: true, results }), {
+      const failedResults = results.filter((result) => !result.success);
+
+      return new Response(JSON.stringify({
+        success: failedResults.length === 0,
+        results,
+        error: failedResults.length > 0
+          ? failedResults.map((result) => `${result.platform}: ${result.error || "Publish failed"}`).join(" | ")
+          : null,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

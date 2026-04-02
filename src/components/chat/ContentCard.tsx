@@ -9,24 +9,11 @@ import { useBrandStore } from "@/lib/store/brandStore";
 import { useToast } from "@/hooks/use-toast";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { publishViaBuffer, getBufferOrganizations, getBufferChannels } from "@/lib/api/ecos";
-
-const platformToService: Record<string, string[]> = {
-  "Instagram": ["instagram"],
-  "YouTube": ["youtube"],
-  "X": ["twitter"],
-  "LinkedIn": ["linkedin"],
-  "Facebook": ["facebook"],
-  "Google Business": ["googlebusiness", "google"],
-  "Pinterest": ["pinterest"],
-  "TikTok": ["tiktok"],
-  "Threads": ["threads"],
-  "Bluesky": ["bluesky"],
-  "Mastodon": ["mastodon"],
-};
+import { buildPublishText, getMatchingBufferChannelIds } from "@/lib/buffer";
 
 interface ContentCardProps {
   contents: GeneratedPlatformContent[];
-  approval?: "approved" | "rejected" | null;
+  approval?: "approved" | "rejected" | "publishing" | null;
   onApprove: () => void;
   onReject: () => void;
   onRetry: () => void;
@@ -50,14 +37,11 @@ export function ContentCard({
   const current = contents[activePlatform];
   const currentMedia = generatedMedia?.[current?.platform];
 
-  const isMediaGenerating = mediaGenerating &&
-    mediaGenerating.platform === current?.platform;
+  const isMediaGenerating = mediaGenerating && mediaGenerating.platform === current?.platform;
 
   const handleCopy = async () => {
-    const text = current?.content || "";
-    const hashtags = current?.hashtags?.join(" ") || "";
-    const fullText = hashtags ? `${text}\n\n${hashtags}` : text;
-    
+    const fullText = buildPublishText(current?.content || "", current?.hashtags);
+
     try {
       await navigator.clipboard.writeText(fullText);
       setCopied(true);
@@ -73,49 +57,35 @@ export function ContentCard({
 
   const handlePublishViaBuffer = useCallback(async () => {
     const platform = current?.platform || "";
-    const text = current?.content || "";
-    const hashtags = current?.hashtags?.join(" ") || "";
-    const fullText = hashtags ? `${text}\n\n${hashtags}` : text;
+    const fullText = buildPublishText(current?.content || "", current?.hashtags);
 
     if (!fullText.trim()) return;
 
     setPublishing(true);
     try {
-      // Get Buffer channels
       const orgResult = await getBufferOrganizations();
       if (!orgResult.success || !orgResult.organizations?.length) {
         toast({ title: "Buffer Not Connected", description: "Connect Buffer in Integrations to publish directly.", variant: "destructive" });
-        setPublishing(false);
         return;
       }
+
       const orgId = orgResult.organizations[0].id;
       const channelResult = await getBufferChannels(orgId);
       if (!channelResult.success || !channelResult.channels?.length) {
         toast({ title: "No Channels Found", description: "No active Buffer channels available.", variant: "destructive" });
-        setPublishing(false);
         return;
       }
-      const activeChannels = (channelResult.channels || []).filter((c: any) => !c.isLocked);
 
-      // Find matching channel for this platform
-      const services = platformToService[platform];
-      const matchedChannel = services
-        ? activeChannels.find((ch: any) => services.includes(ch.service?.toLowerCase()))
-        : undefined;
-
-      const targetIds = matchedChannel ? [matchedChannel.id] : activeChannels.map((c: any) => c.id).slice(0, 1);
-
+      const targetIds = getMatchingBufferChannelIds(platform, channelResult.channels || []);
       if (targetIds.length === 0) {
-        toast({ title: "No Matching Channel", description: `No Buffer channel for ${platform}. Content copied instead.`, variant: "destructive" });
-        handleCopy();
-        setPublishing(false);
+        toast({ title: "No Matching Channel", description: `No Buffer channel is connected for ${platform}.`, variant: "destructive" });
         return;
       }
 
-      const result = await publishViaBuffer([{ platform, content: fullText }], targetIds);
+      const result = await publishViaBuffer([{ platform, content: fullText }], [targetIds[0]]);
       if (result.success) {
         setPublished((prev) => ({ ...prev, [platform]: true }));
-        toast({ title: "Published!", description: `${platform} content sent via Buffer` });
+        toast({ title: "Published!", description: `${platform} content sent via Buffer.` });
       } else {
         toast({ title: "Publish Failed", description: result.error || "Unknown error", variant: "destructive" });
       }
@@ -124,7 +94,7 @@ export function ContentCard({
     } finally {
       setPublishing(false);
     }
-  }, [current, toast, handleCopy]);
+  }, [current, toast]);
 
   return (
     <motion.div
@@ -132,7 +102,6 @@ export function ContentCard({
       animate={{ opacity: 1, y: 0 }}
       className="rounded-xl border border-border bg-card overflow-hidden max-w-xl"
     >
-      {/* Platform tabs */}
       <div className="flex border-b border-border overflow-x-auto">
         {contents.map((c, i) => {
           const Icon = getPlatformIcon(c.platform);
@@ -153,9 +122,7 @@ export function ContentCard({
         })}
       </div>
 
-      {/* Content */}
       <div className="p-4 space-y-3">
-        {/* Preview toggle + Copy/Post actions */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <TooltipProvider>
@@ -167,7 +134,7 @@ export function ContentCard({
                     onClick={handleCopy}
                     className="gap-1.5 text-xs h-7 px-2"
                   >
-                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+                    {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
                     {copied ? "Copied" : "Copy"}
                   </Button>
                 </TooltipTrigger>
@@ -219,7 +186,6 @@ export function ContentCard({
           </>
         )}
 
-        {/* Generated media preview */}
         {!showPreview && currentMedia?.imageUrl && (
           <div className="rounded-lg overflow-hidden border border-border">
             <img src={currentMedia.imageUrl} alt={`Generated for ${current.platform}`} className="w-full object-cover max-h-64" />
@@ -231,7 +197,6 @@ export function ContentCard({
           </div>
         )}
 
-        {/* Media generation buttons with engine labels */}
         <div className="flex flex-wrap gap-2 pt-1">
           <TooltipProvider>
             <Tooltip>
@@ -281,10 +246,8 @@ export function ContentCard({
           </TooltipProvider>
         </div>
 
-        {/* Separator */}
         <div className="border-t border-border" />
 
-        {/* Export options — always visible */}
         <div>
           <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider">Export</span>
           <div className="flex flex-wrap gap-2 mt-1.5">
@@ -304,10 +267,9 @@ export function ContentCard({
         </div>
       </div>
 
-      {/* Approval actions */}
       {!approval && (
         <div className="px-4 pb-4 flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={onApprove} className="gap-1.5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 h-8">
+          <Button size="sm" variant="ghost" onClick={onApprove} className="gap-1.5 text-primary hover:bg-primary/10 h-8">
             <ThumbsUp className="w-4 h-4" />
           </Button>
           <Button size="sm" variant="ghost" onClick={onReject} className="gap-1.5 text-destructive hover:bg-destructive/10 h-8">
@@ -319,15 +281,21 @@ export function ContentCard({
         </div>
       )}
 
-      {approval === "approved" && (
-        <div className="px-4 pb-4 flex items-center gap-2 text-xs text-primary">
-          <ThumbsUp className="w-3.5 h-3.5" /> Content approved
+      {approval === "publishing" && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm text-foreground">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            Publishing to selected platforms via Buffer…
+          </div>
         </div>
       )}
 
-      {approval === "rejected" && (
-        <div className="px-4 pb-4 flex items-center gap-2 text-xs text-destructive">
-          <ThumbsDown className="w-3.5 h-3.5" /> Content rejected
+      {approval === "approved" && (
+        <div className="px-4 pb-4">
+          <div className="flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/10 px-3 py-2 text-sm text-primary">
+            <Check className="h-4 w-4" />
+            Posted successfully via Buffer.
+          </div>
         </div>
       )}
     </motion.div>

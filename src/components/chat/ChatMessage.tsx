@@ -55,3 +55,4 @@ export function ChatMessage({ message, onApprove, onReject, onRetry, onExport, o
     </motion.div>
   );
 }
+

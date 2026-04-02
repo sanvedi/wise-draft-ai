@@ -175,7 +175,7 @@ export function ChatInput({ onSend, disabled, brandWebsite, onBrandLoad }: ChatI
           <Button
             size="icon"
             onClick={handleSend}
-            disabled={!prompt.trim() || disabled}
+            disabled={!prompt.trim() || disabled || selectedPlatforms.length === 0}
             className="h-8 w-8 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 flex-shrink-0"
           >
             <Send className="w-4 h-4" />
@@ -183,7 +183,7 @@ export function ChatInput({ onSend, disabled, brandWebsite, onBrandLoad }: ChatI
         </div>
 
         <p className="text-xs text-muted-foreground text-center">
-          {selectedPlatforms.length > 0 && `Generating for: ${selectedPlatforms.join(", ")}`}
+          {selectedPlatforms.length > 0 ? `Generating for: ${selectedPlatforms.join(", ")}` : "Select at least one platform"}
         </p>
       </div>
     </div>

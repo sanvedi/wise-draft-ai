@@ -3,7 +3,7 @@ import { AnimatePresence } from "framer-motion";
 import { PanelLeft } from "lucide-react";
 import { AccountPanel } from "@/components/chat/AccountPanel";
 import { useToast } from "@/hooks/use-toast";
-import { ecosApi } from "@/lib/api/ecos";
+import { ecosApi, getBufferOrganizations, getBufferChannels, publishViaBuffer } from "@/lib/api/ecos";
 import { useBrandStore } from "@/lib/store/brandStore";
 import { useChatStore, type ChatMessage as ChatMessageType } from "@/lib/store/chatStore";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
@@ -13,6 +13,7 @@ import { GeneratingIndicator } from "@/components/chat/GeneratingIndicator";
 import { FAQPanel } from "@/components/chat/FAQPanel";
 import { Button } from "@/components/ui/button";
 import { useBrandTheme } from "@/hooks/useBrandTheme";
+import { buildPublishText, getMatchingBufferChannelIds } from "@/lib/buffer";
 
 const ChatPage = () => {
   useBrandTheme();
@@ -73,7 +74,7 @@ const ChatPage = () => {
         toast({ title: "Error", description: result.error, variant: "destructive" });
       } else {
         store.updateMessage(convId, assistantId, {
-          content: `Here's your content tailored for ${platforms.join(", ")}. Review it below and approve, reject, or retry.`,
+          content: `Here’s your platform-ready content for ${platforms.join(", ")}. Review it, publish one post, or use thumbs up to publish all selected platforms.`,
           generatedContent: result.contents.map((c) => ({
             platform: c.platform,
             content: c.content,
@@ -84,7 +85,7 @@ const ChatPage = () => {
           approval: null,
         });
       }
-    } catch (e) {
+    } catch {
       store.updateMessage(convId, assistantId, {
         content: "An unexpected error occurred. Please try again.",
         status: "error",
@@ -94,11 +95,74 @@ const ChatPage = () => {
     }
   }, [store, fullBrandDNA, toast]);
 
-  const handleApprove = useCallback((messageId: string) => {
+  const handleApprove = useCallback(async (messageId: string) => {
     const convId = store.activeConversationId;
     if (!convId) return;
-    store.updateMessage(convId, messageId, { approval: "approved" });
-    toast({ title: "Content approved", description: "You can now export in your preferred format." });
+
+    const conv = store.conversations.find((c) => c.id === convId);
+    const message = conv?.messages.find((m) => m.id === messageId);
+    const contents = message?.generatedContent || [];
+    if (contents.length === 0) return;
+
+    store.updateMessage(convId, messageId, { approval: "publishing" });
+    toast({ title: "Publishing…", description: `Sending ${contents.length} selected platform posts via Buffer.` });
+
+    try {
+      const orgResult = await getBufferOrganizations();
+      if (!orgResult.success || !orgResult.organizations?.length) {
+        throw new Error(orgResult.error || "Buffer is not connected.");
+      }
+
+      const orgId = orgResult.organizations[0].id;
+      const channelResult = await getBufferChannels(orgId);
+      if (!channelResult.success || !channelResult.channels?.length) {
+        throw new Error(channelResult.error || "No active Buffer channels found.");
+      }
+
+      const failures: string[] = [];
+      let successCount = 0;
+
+      for (const item of contents) {
+        const targetIds = getMatchingBufferChannelIds(item.platform, channelResult.channels || []);
+        if (targetIds.length === 0) {
+          failures.push(`${item.platform}: no matching Buffer channel`);
+          continue;
+        }
+
+        const result = await publishViaBuffer([
+          {
+            platform: item.platform,
+            content: buildPublishText(item.content, item.hashtags),
+          },
+        ], targetIds);
+
+        if (result.success) {
+          successCount += 1;
+        } else {
+          failures.push(`${item.platform}: ${result.error || "publish failed"}`);
+        }
+      }
+
+      if (failures.length > 0) {
+        store.updateMessage(convId, messageId, { approval: null });
+        toast({
+          title: successCount > 0 ? "Partially Published" : "Publish Failed",
+          description: failures.join(" • "),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      store.updateMessage(convId, messageId, { approval: "approved" });
+      toast({ title: "Published", description: `${successCount} selected platform posts are now live via Buffer.` });
+    } catch (e) {
+      store.updateMessage(convId, messageId, { approval: null });
+      toast({
+        title: "Publish Failed",
+        description: e instanceof Error ? e.message : "Could not publish via Buffer.",
+        variant: "destructive",
+      });
+    }
   }, [store, toast]);
 
   const handleReject = useCallback((messageId: string) => {
@@ -161,7 +225,7 @@ const ChatPage = () => {
       }
 
       store.updateMessage(convId, messageId, { generatedMedia: updatedMedia });
-    } catch (e) {
+    } catch {
       toast({ title: "Error", description: "Could not generate media.", variant: "destructive" });
     } finally {
       setMediaGenerating(null);
@@ -215,13 +279,13 @@ const ChatPage = () => {
             {!activeConversation || activeConversation.messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full min-h-[50vh] text-center space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                  <span className="text-primary font-display font-bold text-lg">A</span>
+                  <span className="text-primary font-display font-bold text-lg">F</span>
                 </div>
                 <h1 className="text-2xl font-display font-bold text-foreground">
-                  The Content <span className="text-primary">Alchemist</span>
+                  Content <span className="text-primary">Flow</span>
                 </h1>
                 <p className="text-muted-foreground max-w-md text-sm leading-relaxed">
-                  Transform your ideas into polished, platform-ready content. Select your platforms, describe your content, and let the magic happen.
+                  Transform ideas into platform-ready content, tailored to each selected channel and ready to publish through Buffer.
                 </p>
               </div>
             ) : (
